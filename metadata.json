@@ -1,0 +1,6 @@
+{
+  "name": "The Art Ledger",
+  "description": "A premium, luxury editorial website showcasing contemporary artists, exhibitions, curated blogs, and digital magazines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
