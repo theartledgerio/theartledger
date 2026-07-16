@@ -25,7 +25,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     persistSession: false
   },
   realtime: {
-    transport: WebSocket
+    transport: WebSocket as any
   }
 });
 
