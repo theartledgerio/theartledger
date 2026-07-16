@@ -161,8 +161,8 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
               </h4>
               <p className="text-xs text-slate-600 leading-relaxed">
                 TAL Headquarters: <br />
-                84 Rue de l'Université, 75007 Paris, France <br />
-                New Delhi Office: Okhla Phase III, New Delhi 110020, India
+                Unit No. 309, 3rd Floor, Tower A, SAS Tower, <br />
+                Sector 38, Gurugram, Haryana 122001, India
               </p>
               
               <div className="text-xs space-y-2 text-slate-600 pt-1">

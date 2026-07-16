@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-
+import WebSocket from 'ws';
 dotenv.config();
 
 const app = express();
@@ -19,7 +19,15 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.warn('Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not defined in environment variables.');
 }
 
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  realtime: {
+    transport: WebSocket
+  }
+});
 
 // Basic health check
 app.get('/', (req, res) => {
