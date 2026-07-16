@@ -135,7 +135,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             season: m.tagline || 'Recent Release',
             coverUrl: m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
             description: m.short_summary || m.long_description || 'A fine art periodical published by The Art Ledger.',
-            price: 499,
+            price: m.single_issue_price || 2500,
             pages: previewPages,
             editorNote: m.editor_note
           };
@@ -278,7 +278,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
     try {
       // Create payment order on the backend
-      const response = await fetch(`${API_BASE_URL}/payment-create`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -317,7 +317,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           setIsPurchased(true);
           setIsPending(false);
 
-          await fetch(`${API_BASE_URL}/payment-webhook`, {
+          await fetch(`${import.meta.env.VITE_API_URL}/payment-webhook`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

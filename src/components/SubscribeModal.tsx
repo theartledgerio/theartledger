@@ -8,7 +8,7 @@ interface SubscribeModalProps {
 }
 
 export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps) {
- const [selectedPlan, setSelectedPlan] = useState<'2_issues' | '3_issues'>('3_issues');
+ const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
  const [isSubmitted, setIsSubmitted] = useState(false);
  const [isPending, setIsPending] = useState(false);
  const [memberId, setMemberId] = useState('');
@@ -19,20 +19,12 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
 
  const plans = [
  {
- id: '2_issues' as const,
- name: '2 Publications Subscription',
- price: '₹799',
+ id: '1_year' as const,
+ name: '1 Year Subscription',
+ price: '₹30,000',
  period: 'subscription',
- desc: 'Receive the next 2 curated print publications delivered directly to your doorstep.',
- perks: ['2 Printed Journal Issues', 'Full Digital Ledger Access', 'Verified ledger certificates', 'Invitation to standard previews']
- },
- {
- id: '3_issues' as const,
- name: '3 Publications Subscription',
- price: '₹999',
- period: 'subscription',
- desc: 'Our premium offering. Receive the next 3 curated print publications delivered directly to your doorstep.',
- perks: ['3 Printed Journal Issues', 'Everything in 2 Publications', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
+ desc: 'Our premium offering. Receive curated print publications delivered directly to your doorstep for an entire year.',
+ perks: ['All Printed Journal Issues', 'Full Digital Ledger Access', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
  featured: true
  }
  ];
@@ -43,7 +35,7 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  setIsPending(true);
 
  try {
- const response = await fetch(`${API_BASE_URL}/payment-create`, {
+ const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-create`, {
  method: 'POST',
  headers: {
  'Content-Type': 'application/json'
@@ -74,7 +66,7 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  setIsSubmitted(true);
  setIsPending(false);
 
- await fetch(`${API_BASE_URL}/payment-webhook`, {
+ await fetch(`${import.meta.env.VITE_API_URL}/payment-webhook`, {
  method: 'POST',
  headers: {
  'Content-Type': 'application/json',

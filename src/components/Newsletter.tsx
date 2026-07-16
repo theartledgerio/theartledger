@@ -20,7 +20,7 @@ export default function Newsletter() {
     setErrorMessage('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/newsletter-subscribe`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/newsletter-subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

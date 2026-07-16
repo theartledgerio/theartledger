@@ -81,20 +81,17 @@ app.post('/payment-create', express.json(), async (req, res) => {
       if (dbError || !magazine) {
         return res.status(404).json({ error: 'Magazine issue not found' });
       }
-      amount = 499 * quantity;
+      amount = (magazine.single_issue_price || 2500) * quantity;
       desc = `TAL Issue Purchase: ${magazine.issue_name}`;
-    } else if (plan === '2_issues') {
-      amount = 799;
-      desc = 'TAL Subscription: 2 Publications';
-    } else if (plan === '3_issues') {
-      amount = 999;
-      desc = 'TAL Subscription: 3 Publications';
+    } else if (plan === '1_year') {
+      amount = 30000;
+      desc = 'TAL Subscription: 1 Year';
     } else {
       return res.status(400).json({ error: 'Invalid plan or missing issue' });
     }
 
     let shippingFee = 0;
-    if (plan === 'single' || plan === '2_issues' || plan === '3_issues') {
+    if (plan === 'single' || plan === '1_year') {
       const isIndia = (country || 'India').toLowerCase().trim() === 'india';
       shippingFee = isIndia ? 150 : 2500;
     }
