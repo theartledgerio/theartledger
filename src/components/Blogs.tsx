@@ -234,7 +234,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
                   {/* Photo cover */}
                   <div className="h-[300px] md:h-[450px] overflow-hidden relative">
                     <span className="absolute top-4 left-4 z-10 px-3.5 py-1 bg-midnight text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold">
-                      FEATURED ARTICLE // {featuredBlog.category}
+                      {featuredBlog.category}
                     </span>
                     <img
                       src={featuredBlog.image}

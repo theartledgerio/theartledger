@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Download, CreditCard, ChevronLeft, ChevronRight, X, Sparkles, CheckCircle2, Sun, Moon, Share2, MapPin, Locate, Loader2 } from 'lucide-react';
 import { supabase } from '../supabase';
+import { useCurrency } from '../CurrencyContext';
 
 interface MagazineEdition {
   id: string;
@@ -16,6 +17,8 @@ interface MagazineEdition {
   coverUrl: string;
   description: string;
   price: number;
+  pdfUrl?: string;
+  digitalPrice?: number;
   pages: string[];
   editorNote?: string;
 }
@@ -28,6 +31,7 @@ interface MagazineSectionProps {
 }
 
 export default function MagazineSection({ isHome = false, onChangePage, user = null, onSignInClick }: MagazineSectionProps) {
+  const { formatPrice, currency } = useCurrency();
   const [magazines, setMagazines] = useState<MagazineEdition[]>([]);
   const [activeIssue, setActiveIssue] = useState<MagazineEdition | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   const [isPending, setIsPending] = useState(false);
   const [receiptId, setReceiptId] = useState('');
   const [mapOpen, setMapOpen] = useState(false);
+  const [purchasePlan, setPurchasePlan] = useState<'single' | 'digital_single'>('single');
 
   useEffect(() => {
     if (user?.email) {
@@ -118,15 +123,18 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         if (error) throw error;
 
         const mapped: MagazineEdition[] = (data || []).map(m => {
-          // Setup realistic Unsplash previews or use cover
-          const previewPages = [
-            m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
-            'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=850',
-            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600&h=850',
-            'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600&h=850',
-            'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=600&h=850',
-            'https://images.unsplash.com/photo-1501472312651-726afd116ff1?auto=format&fit=crop&q=80&w=600&h=850'
-          ];
+          // Setup preview pages from database or use defaults
+          let previewPages = [];
+          if (m.preview_pages && m.preview_pages.length > 0) {
+            previewPages = m.preview_pages;
+          } else {
+            previewPages = [
+              m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
+              'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=850',
+              'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600&h=850',
+              'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600&h=850'
+            ];
+          }
           
           return {
             id: m.id,
@@ -136,6 +144,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             coverUrl: m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
             description: m.short_summary || m.long_description || 'A fine art periodical published by The Art Ledger.',
             price: m.single_issue_price || 2500,
+            pdfUrl: m.pdf_url,
+            digitalPrice: m.digital_pdf_price || 299,
             pages: previewPages,
             editorNote: m.editor_note
           };
@@ -284,7 +294,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          plan: 'single',
+          plan: purchasePlan,
           selected_issue: activeIssue.id,
           name: shippingName,
           email: shippingEmail,
@@ -292,7 +302,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           address: shippingAddress,
           city: shippingCity,
           pincode: shippingPincode,
-          country: shippingCountry,
+          country: currency === 'INR' ? 'India' : 'International',
+          currency: currency,
           quantity: 1
         })
       });
@@ -411,19 +422,37 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-4">
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onSignInClick && onSignInClick();
-                  } else {
-                    setPurchaseOpen(true);
-                  }
-                }}
-                className="group flex items-center gap-2.5 px-8 py-4 rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
-              >
-                <span>Purchase Print</span>
-                <span className="transform group-hover:translate-x-0.5 transition-transform">→</span>
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <button
+                  onClick={() => {
+                    if (!user) {
+                      onSignInClick && onSignInClick();
+                    } else {
+                      setPurchasePlan('single');
+                      setPurchaseOpen(true);
+                    }
+                  }}
+                  className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full sm:w-auto rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
+                >
+                  <span>Buy Physical Copy ({formatPrice(activeIssue.price)})</span>
+                </button>
+
+                {activeIssue.pdfUrl && (
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        onSignInClick && onSignInClick();
+                      } else {
+                        setPurchasePlan('digital_single');
+                        setPurchaseOpen(true);
+                      }
+                    }}
+                    className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full sm:w-auto rounded-full bg-white text-midnight border border-slate-200 hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-sm cursor-pointer"
+                  >
+                    <span>Buy Digital PDF ({formatPrice(activeIssue.digitalPrice || 299)})</span>
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => setPreviewOpen(true)}
@@ -699,22 +728,22 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               </div>
 
               {/* Spread Page Container (Perspective Book Spread) */}
-              <div className={`relative w-full aspect-[16/10] rounded-2xl p-6 flex justify-center items-center overflow-hidden transition-colors duration-500 [perspective:2000px] ${
+              <div className={`relative w-full aspect-[4/5] sm:aspect-[3/4] md:aspect-[16/10] rounded-2xl p-4 md:p-6 flex justify-center items-center overflow-hidden transition-colors duration-500 [perspective:2000px] ${
                 readingMode === 'dark' 
                   ? 'bg-[#090D16] shadow-2xl' 
                   : 'bg-[#FAF8F5] shadow-xl'
               }`}>
                 
                 {/* 3D Book Case / Cover Backdrop */}
-                <div className={`absolute inset-y-4 inset-x-5 rounded-lg shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 pointer-events-none z-0 ${
+                <div className={`absolute inset-y-4 inset-x-4 md:inset-x-5 rounded-lg shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 pointer-events-none z-0 ${
                   readingMode === 'dark'
                     ? 'bg-[#181512]'
                     : 'bg-[#4E3F35]'
                 }`} />
 
                 {/* Immersive Floating Glassmorphic Toolbar */}
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[90%]">
-                  <div className={`flex items-center gap-3 px-5 py-2.5 rounded-full border shadow-xl backdrop-blur-md transition-all duration-500 ${
+                <div className="absolute top-4 md:top-6 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[95%] md:max-w-[90%]">
+                  <div className={`flex items-center justify-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 rounded-full border shadow-xl backdrop-blur-md transition-all duration-500 ${
                     readingMode === 'dark'
                       ? 'bg-[#0B0F19]/85 border-white/10 text-white shadow-black/40'
                       : 'bg-white/80 border-slate-200/60 text-midnight shadow-slate-200/30'
@@ -792,7 +821,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         <img
                           src={activeIssue.pages[previewPageIndex * 2]}
                           alt="Left page"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover md:object-fill"
                           referrerPolicy="no-referrer"
                         />
                         {/* Page lighting crease overlay */}
@@ -825,7 +854,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         <img
                           src={activeIssue.pages[previewPageIndex * 2 + 1]}
                           alt="Right page"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover md:object-fill"
                           referrerPolicy="no-referrer"
                         />
                         {/* Page lighting crease overlay */}
@@ -984,106 +1013,107 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
                     />
                   </div>
+                  {purchasePlan !== 'digital_single' && (
+                    <>
+                      {/* Location Autofill Buttons */}
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleUseCurrentLocation}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:border-turquoise hover:bg-turquoise/5 text-midnight hover:text-turquoise rounded-xl text-[10px] font-mono tracking-wider font-bold transition-all cursor-pointer"
+                        >
+                          <Locate className="w-3.5 h-3.5" />
+                          USE LOCATION
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMapOpen(true)}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:border-turquoise hover:bg-turquoise/5 text-midnight hover:text-turquoise rounded-xl text-[10px] font-mono tracking-wider font-bold transition-all cursor-pointer"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          SELECT ON MAP
+                        </button>
+                      </div>
 
-                  {/* Location Autofill Buttons */}
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleUseCurrentLocation}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:border-turquoise hover:bg-turquoise/5 text-midnight hover:text-turquoise rounded-xl text-[10px] font-mono tracking-wider font-bold transition-all cursor-pointer"
-                    >
-                      <Locate className="w-3.5 h-3.5" />
-                      USE LOCATION
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMapOpen(true)}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 border border-slate-200 hover:border-turquoise hover:bg-turquoise/5 text-midnight hover:text-turquoise rounded-xl text-[10px] font-mono tracking-wider font-bold transition-all cursor-pointer"
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
-                      SELECT ON MAP
-                    </button>
-                  </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                          Shipping Address
+                        </label>
+                        <input
+                          type="text"
+                          required={purchasePlan !== 'digital_single'}
+                          placeholder="Street address, apartment, suite"
+                          value={shippingAddress}
+                          onChange={(e) => setShippingAddress(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
-                      Shipping Address
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Street address, apartment, suite"
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
-                    />
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                            City
+                          </label>
+                          <input
+                            type="text"
+                            required={purchasePlan !== 'digital_single'}
+                            placeholder="Mumbai"
+                            value={shippingCity}
+                            onChange={(e) => setShippingCity(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                            Pincode
+                          </label>
+                          <input
+                            type="text"
+                            required={purchasePlan !== 'digital_single'}
+                            placeholder="400001"
+                            value={shippingPincode}
+                            onChange={(e) => setShippingPincode(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Mumbai"
-                        value={shippingCity}
-                        onChange={(e) => setShippingCity(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
-                        Pincode
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="400001"
-                        value={shippingPincode}
-                        onChange={(e) => setShippingPincode(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
-                      Country
-                    </label>
-                    <select
-                      value={shippingCountry}
-                      onChange={(e) => setShippingCountry(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
-                    >
-                      <option value="India">India</option>
-                      <option value="United States">United States</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Singapore">Singapore</option>
-                      <option value="United Arab Emirates">United Arab Emirates</option>
-                      <option value="Other">Other Country</option>
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                          Country
+                        </label>
+                        <select
+                          value={shippingCountry}
+                          onChange={(e) => setShippingCountry(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                        >
+                          <option value="India">India</option>
+                          <option value="United States">United States</option>
+                          <option value="United Kingdom">United Kingdom</option>
+                          <option value="Singapore">Singapore</option>
+                          <option value="United Arab Emirates">United Arab Emirates</option>
+                          <option value="Other">Other Country</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
 
                   {/* Summary Pricing Block */}
                   <div className="p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 text-xs space-y-2 text-midnight">
                     <div className="flex justify-between font-semibold">
-                      <span className="text-graycustom">Print Edition Price</span>
-                      <span>₹{activeIssue.price.toFixed(0)}</span>
+                      <span className="text-graycustom">{purchasePlan === 'digital_single' ? 'Digital PDF Price' : 'Print Edition Price'}</span>
+                      <span>₹{purchasePlan === 'digital_single' ? (activeIssue.digitalPrice || 299).toFixed(0) : activeIssue.price.toFixed(0)}</span>
                     </div>
-                    <div className="flex justify-between font-semibold">
-                      <span className="text-graycustom">
-                        Shipping ({shippingCountry === 'India' ? 'Domestic' : 'International'})
-                      </span>
-                      <span>₹{shippingCountry === 'India' ? '150' : '2,500'}</span>
-                    </div>
-                    <div className="h-[1px] bg-slate-200 my-1" />
+                    {purchasePlan !== 'digital_single' && (
+                      <div className="flex justify-between font-semibold text-graycustom">
+                        <span>Shipping ({shippingCountry})</span>
+                        <span>₹{shippingCountry.toLowerCase().trim() === 'india' ? 150 : 2500}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-slate-200/60 my-2"></div>
                     <div className="flex justify-between font-bold text-sm">
-                      <span>Total Amount</span>
-                      <span className="text-turquoise font-serif">
-                        ₹{(activeIssue.price + (shippingCountry === 'India' ? 150 : 2500)).toFixed(0)}
-                      </span>
+                      <span>Total</span>
+                      <span>₹{purchasePlan === 'digital_single' ? (activeIssue.digitalPrice || 299).toFixed(0) : (activeIssue.price + (shippingCountry.toLowerCase().trim() === 'india' ? 150 : 2500)).toFixed(0)}</span>
                     </div>
                   </div>
 
@@ -1097,7 +1127,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     </button>
                     <button
                       type="submit"
-                      disabled={isPending || !shippingName || !shippingEmail || !shippingPhone || !shippingAddress || !shippingCity || !shippingPincode}
+                      disabled={isPending || !shippingName || !shippingEmail || !shippingPhone || (purchasePlan !== 'digital_single' && (!shippingAddress || !shippingCity || !shippingPincode))}
                       className="flex-1 py-3 bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all duration-200 shadow-lg cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
                       {isPending ? (

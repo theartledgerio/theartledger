@@ -172,7 +172,7 @@ export default function Hero({ onChangePage }: HeroProps) {
               {/* Bottom text overlay */}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 text-white">
                 <span className="text-[8px] font-mono tracking-widest text-slate-300 font-bold uppercase mb-1 block">
-                  {latestBlog ? `ESSAY // ${latestBlog.category.toUpperCase()}` : 'ARTIST SPOTLIGHT'}
+                  {latestBlog ? `ESSAY // ${latestBlog.category.toUpperCase()}` : 'FEATURED'}
                 </span>
                 <h3 className="text-[10px] sm:text-xs font-sans font-semibold leading-tight text-white line-clamp-2">
                   {latestBlog ? latestBlog.title : 'In Conversation with Prajakta Potnis'}

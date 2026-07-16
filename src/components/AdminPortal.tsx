@@ -74,6 +74,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [magShortSummary, setMagShortSummary] = useState('');
   const [magLongDescription, setMagLongDescription] = useState('');
   const [magCoverUrl, setMagCoverUrl] = useState('');
+  const [magPdfUrl, setMagPdfUrl] = useState('');
+  const [magDigitalPrice, setMagDigitalPrice] = useState('299');
+  const [magPreviewPages, setMagPreviewPages] = useState(''); // Comma separated URLs
   const [magStatus, setMagStatus] = useState('published');
 
   // 3. Artist
@@ -316,6 +319,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setMagShortSummary(item ? item.short_summary || '' : '');
       setMagLongDescription(item ? item.long_description || '' : '');
       setMagCoverUrl(item ? item.cover_image_url || '' : '');
+      setMagPdfUrl(item ? item.pdf_url || '' : '');
+      setMagDigitalPrice(item ? (item.digital_pdf_price || 299).toString() : '299');
+      setMagPreviewPages(item && item.preview_pages ? item.preview_pages.join(', ') : '');
       setMagStatus(item ? item.status : 'published');
     } else if (type === 'artist') {
       setArtName(item ? item.name : '');
@@ -368,6 +374,32 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     }
   };
 
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      triggerToast('Uploading PDF...');
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('magazine_pdfs')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from('magazine_pdfs').getPublicUrl(filePath);
+      setMagPdfUrl(data.publicUrl);
+      triggerToast('PDF uploaded successfully!');
+    } catch (error: any) {
+      triggerToast(`PDF Upload failed: ${error.message}`);
+    }
+  };
+
   // Submit CRUD Action
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,6 +434,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           slug: magSlug || magIssueName.toLowerCase().replace(/ /g, '-'),
           release_date: magReleaseDate || new Date().toISOString().split('T')[0],
           single_issue_price: parseFloat(magPrice) || 0.0,
+          digital_pdf_price: parseFloat(magDigitalPrice) || 299.0,
+          pdf_url: magPdfUrl,
+          preview_pages: magPreviewPages ? magPreviewPages.split(',').map(s => s.trim()).filter(s => s) : [],
           tagline: magTagline,
           short_summary: magShortSummary,
           long_description: magLongDescription,
@@ -1331,6 +1366,46 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           <img src={magCoverUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Digital PDF File</label>
+                      <div className="flex gap-4 items-center">
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={handlePdfUpload}
+                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                        {magPdfUrl && (
+                          <a href={magPdfUrl} target="_blank" rel="noreferrer" className="text-xs font-mono text-turquoise underline">Preview PDF</a>
+                        )}
+                      </div>
+                      <p className="text-[9px] text-slate-400 font-mono">Upload the PDF to Supabase Storage</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Digital PDF Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={magDigitalPrice}
+                        onChange={(e) => setMagDigitalPrice(e.target.value)}
+                        placeholder="299.00"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Preview Pages URLs</label>
+                      <input
+                        type="text"
+                        value={magPreviewPages}
+                        onChange={(e) => setMagPreviewPages(e.target.value)}
+                        placeholder="https://image1.jpg, https://image2.jpg"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                      <p className="text-[9px] text-slate-400 font-mono">Comma-separated URLs for the magazine preview carousel.</p>
                     </div>
 
                     <div className="space-y-1">

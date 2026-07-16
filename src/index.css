@@ -248,6 +248,8 @@ body {
   box-shadow: 0 15px 35px -12px rgba(15, 60, 105, 0.15);
   margin: 2.5rem auto;
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .blog-rich-content figure {

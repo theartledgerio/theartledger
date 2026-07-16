@@ -35,10 +35,10 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           date: '2026-08-11',
           time: '12:00 PM - 7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
-          artist: 'SKAF India (Curator: siddhARTha karmakar)',
+          artist: 'SKAF India (Curator: Siddharth Karmakar)',
           image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
           status: 'Upcoming',
-          description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by siddhARTha karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
+          description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
           type: 'Exhibition',
           timelineStep: 1
         };
@@ -494,9 +494,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                               />
                               <div className="space-y-2">
                                 <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block font-bold">CURATOR BIOGRAPHY</span>
-                                <h4 className="text-sm font-serif font-bold text-midnight">siddhARTha karmakar Art Foundation (SKAF India)</h4>
+                                <h4 className="text-sm font-serif font-bold text-midnight">Siddharth Karmakar Art Foundation (SKAF India)</h4>
                                 <p className="text-xs text-graycustom leading-relaxed">
-                                  Founded by artist and advertising professional siddhARTha karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddhartha combines creative and strategic expertise to guide artists in navigating today’s art landscape.
+                                  Founded by artist and advertising professional Siddharth Karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddharth combines creative and strategic expertise to guide artists in navigating today’s art landscape.
                                 </p>
                               </div>
                             </div>

@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, CreditCard, Sparkles, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
+import { useCurrency } from '../CurrencyContext';
+
 interface SubscribeModalProps {
  isOpen: boolean;
  onClose: () => void;
 }
 
 export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps) {
+ const { formatPrice, currency } = useCurrency();
  const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
  const [isSubmitted, setIsSubmitted] = useState(false);
  const [isPending, setIsPending] = useState(false);
@@ -21,7 +24,7 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  {
  id: '1_year' as const,
  name: '1 Year Subscription',
- price: '₹30,000',
+ priceInINR: 30000,
  period: 'subscription',
  desc: 'Our premium offering. Receive curated print publications delivered directly to your doorstep for an entire year.',
  perks: ['All Printed Journal Issues', 'Full Digital Ledger Access', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
@@ -44,7 +47,8 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  plan: selectedPlan,
  name,
  email,
- country: 'India'
+ country: currency === 'INR' ? 'India' : 'International',
+ currency
  })
  });
 
@@ -193,7 +197,7 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  </h4>
  
  <div className="flex items-baseline gap-0.5">
- <span className="text-base font-serif font-bold text-midnight ">{plan.price}</span>
+ <span className="text-base font-serif font-bold text-midnight ">{formatPrice(plan.priceInINR)}</span>
  <span className="text-[10px] text-graycustom ">/{plan.period}</span>
  </div>
  </div>

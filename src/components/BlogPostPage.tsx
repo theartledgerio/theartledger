@@ -163,6 +163,13 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
           </div>
         </div>
 
+        {/* Cover Image */}
+        {blog.image && !blog.content.includes(blog.image) && (
+          <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg">
+            <img src={blog.image} alt={blog.title} className="w-full h-auto object-cover max-h-[60vh]" />
+          </div>
+        )}
+
         {/* Article Content Render */}
         <div 
           className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 blog-rich-content"

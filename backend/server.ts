@@ -58,6 +58,7 @@ app.post('/payment-create', express.json(), async (req, res) => {
       city,
       pincode,
       country,
+      currency = 'INR',
       quantity = 1
     } = req.body;
 
@@ -71,18 +72,24 @@ app.post('/payment-create', express.json(), async (req, res) => {
     let amount = 0;
     let desc = '';
 
-    if (plan === 'single' && selected_issue) {
+    if ((plan === 'single' || plan === 'digital_single') && selected_issue) {
       const { data: magazine, error: dbError } = await supabaseAdmin
         .from('magazines')
-        .select('single_issue_price, issue_name')
+        .select('single_issue_price, digital_pdf_price, issue_name')
         .eq('id', selected_issue)
         .single();
 
       if (dbError || !magazine) {
         return res.status(404).json({ error: 'Magazine issue not found' });
       }
-      amount = (magazine.single_issue_price || 2500) * quantity;
-      desc = `TAL Issue Purchase: ${magazine.issue_name}`;
+      
+      if (plan === 'digital_single') {
+        amount = (magazine.digital_pdf_price || 299) * quantity;
+        desc = `TAL Digital PDF Purchase: ${magazine.issue_name}`;
+      } else {
+        amount = (magazine.single_issue_price || 2500) * quantity;
+        desc = `TAL Issue Purchase: ${magazine.issue_name}`;
+      }
     } else if (plan === '1_year') {
       amount = 30000;
       desc = 'TAL Subscription: 1 Year';
@@ -92,8 +99,18 @@ app.post('/payment-create', express.json(), async (req, res) => {
 
     let shippingFee = 0;
     if (plan === 'single' || plan === '1_year') {
-      const isIndia = (country || 'India').toLowerCase().trim() === 'india';
-      shippingFee = isIndia ? 150 : 2500;
+      if (currency === 'USD') {
+        shippingFee = 15; // $15 international shipping
+      } else {
+        const isIndia = (country || 'India').toLowerCase().trim() === 'india';
+        shippingFee = isIndia ? 150 : 2500;
+      }
+    }
+    // digital_single explicitly gets 0 shippingFee
+    
+    const exchangeRate = 80;
+    if (currency === 'USD') {
+      amount = Math.ceil(amount / exchangeRate);
     }
 
     const totalAmount = amount + shippingFee;
@@ -111,7 +128,7 @@ app.post('/payment-create', express.json(), async (req, res) => {
       },
       body: JSON.stringify({
         amount: amountInSubunits,
-        currency: 'INR',
+        currency: currency === 'USD' ? 'USD' : 'INR',
         receipt: `receipt_tal_${Date.now()}`,
         notes: {
           userId: userId || '',

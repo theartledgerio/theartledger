@@ -30,10 +30,10 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
   };
 
   const socialLinks = [
-    { name: 'Instagram', icon: <Instagram className="w-4 h-4" />, href: '#' },
-    { name: 'Twitter', icon: <Twitter className="w-4 h-4" />, href: '#' },
-    { name: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, href: '#' },
-    { name: 'YouTube', icon: <Youtube className="w-4 h-4" />, href: '#' }
+    { name: 'Instagram', icon: <Instagram className="w-4 h-4" />, href: 'https://www.instagram.com/artledgermagazine?igsh=N3dmaTF3NWg0dHEw&utm_source=qr' },
+    { name: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, href: 'https://www.linkedin.com/company/art-ledger-media-private-limited/' },
+    { name: 'Twitter (Coming Soon)', icon: <Twitter className="w-4 h-4" />, href: '#' },
+    { name: 'YouTube (Coming Soon)', icon: <Youtube className="w-4 h-4" />, href: '#' }
   ];
 
   return (
@@ -139,7 +139,7 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
                     onClick={() => onChangePage('magazine')}
                     className="hover:text-midnight transition-all duration-200 cursor-pointer hover:translate-x-1 transform inline-block"
                   >
-                    Quarterly Magazines
+                    Magazines
                   </button>
                 </li>
                 <li>
@@ -167,21 +167,12 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
               
               <div className="text-xs space-y-2 text-slate-600 pt-1">
                 <p>
-                  Advisory:{" "}
+                  Contact:{" "}
                   <a
-                    href="mailto:curator@artledger.com"
+                    href="mailto:contact@infoartledger.com"
                     className="text-midnight font-semibold hover:text-midnight hover:underline transition-colors"
                   >
-                    curator@artledger.com
-                  </a>
-                </p>
-                <p>
-                  Acquisitions:{" "}
-                  <a
-                    href="mailto:acquisitions@artledger.com"
-                    className="text-midnight font-semibold hover:text-midnight hover:underline transition-colors"
-                  >
-                    acquisitions@artledger.com
+                    contact@infoartledger.com
                   </a>
                 </p>
               </div>
