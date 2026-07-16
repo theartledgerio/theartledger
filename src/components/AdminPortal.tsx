@@ -132,18 +132,21 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
   async function verifyAdmin(userId: string) {
     try {
+      const allowedRoles = portalRole === 'editor' ? ['admin', 'editor'] : ['admin'];
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
+        .in('role', allowedRoles)
+        .limit(1)
+        .maybeSingle();
       
       if (data && !error) {
         setIsAdmin(true);
       } else {
         setIsAdmin(false);
-        setErrorMsg('Access Denied: You do not have administrator permissions.');
+        setErrorMsg(`Access Denied: You do not have ${portalRole} permissions.`);
         await supabase.auth.signOut();
         setIsAuthenticated(false);
       }
@@ -203,19 +206,8 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     setLoading(true);
     setErrorMsg('');
     try {
-      // Dummy credentials for testing
-      if (email === 'admin@theartledger.com' && password === 'LedgerAdmin26' && portalRole === 'admin') {
-        setIsAuthenticated(true);
-        setIsAdmin(true);
-        setLoading(false);
-        return;
-      }
-      if (email === 'editor@theartledger.com' && password === 'ArtLedger26' && portalRole === 'editor') {
-        setIsAuthenticated(true);
-        setIsAdmin(true); // Treat as authenticated admin in the local context, restricted by UI
-        setLoading(false);
-        return;
-      }
+      // Dummy credentials removed for production security.
+      // Now enforcing real Supabase Authentication.
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
