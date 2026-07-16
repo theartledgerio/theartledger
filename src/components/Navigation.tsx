@@ -67,7 +67,7 @@ export default function Navigation({
         id="main-nav"
         className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 ${
           scrolled 
-            ? 'py-3 bg-warmwhite/90 border-b border-offwhite/50 backdrop-blur-md shadow-sm' 
+            ? 'py-3 bg-white/70 border-b border-slate-200/50 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)]' 
             : 'py-6 bg-transparent border-b border-transparent'
         }`}
       >
@@ -183,7 +183,7 @@ export default function Navigation({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
-              className="lg:hidden w-full bg-warmwhite/95 border-b border-offwhite backdrop-blur-md mt-2"
+              className="lg:hidden w-full bg-white/95 border-b border-slate-200/50 backdrop-blur-xl mt-2 shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
             >
               <div className="flex flex-col px-6 py-6 space-y-4">
                 {navItems.map((item) => {

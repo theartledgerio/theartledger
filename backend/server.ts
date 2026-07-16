@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3003;
 
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 
 // Configure Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
@@ -83,31 +83,18 @@ app.post('/payment-create', express.json(), async (req, res) => {
       }
       amount = 499 * quantity;
       desc = `TAL Issue Purchase: ${magazine.issue_name}`;
-    } else if (plan === 'quarterly' || plan === 'annual') {
-      const { data: settings, error: dbError } = await supabaseAdmin
-        .from('subscription_settings')
-        .select('quarterly_price, annual_price')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-
-      if (dbError || !settings) {
-        return res.status(404).json({ error: 'Subscription settings not found' });
-      }
-
-      if (plan === 'quarterly') {
-        amount = Number(settings.quarterly_price);
-        desc = 'TAL Subscription: Quarterly Membership';
-      } else {
-        amount = Number(settings.annual_price);
-        desc = 'TAL Subscription: Annual VIP Membership';
-      }
+    } else if (plan === '2_issues') {
+      amount = 799;
+      desc = 'TAL Subscription: 2 Publications';
+    } else if (plan === '3_issues') {
+      amount = 999;
+      desc = 'TAL Subscription: 3 Publications';
     } else {
       return res.status(400).json({ error: 'Invalid plan or missing issue' });
     }
 
     let shippingFee = 0;
-    if (plan === 'single' || plan === 'quarterly' || plan === 'annual') {
+    if (plan === 'single' || plan === '2_issues' || plan === '3_issues') {
       const isIndia = (country || 'India').toLowerCase().trim() === 'india';
       shippingFee = isIndia ? 150 : 2500;
     }
@@ -256,7 +243,7 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
       } else {
         const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
         const matchedUser = authUsers?.users?.find(
-          u => u.email?.toLowerCase() === dbPayment.email.toLowerCase()
+          (u: any) => u.email?.toLowerCase() === dbPayment.email.toLowerCase()
         );
         if (matchedUser) {
           targetUserId = matchedUser.id;
@@ -289,7 +276,7 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
         const resendResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
+            'Authorization': 'Bearer ' + resendApiKey,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -300,7 +287,7 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
                 <h2 style="font-family: serif; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 20px;">THE ART LEDGER</h2>
                 <p>Hello ${dbPayment.name || 'Collector'},</p>
-                <p>We are delighted to confirm receipt of your payment for <strong>${dbPayment.plan === 'single' ? 'Periodical Issue' : dbPayment.plan + ' Membership'}</strong>.</p>
+                <p>We are delighted to confirm receipt of your payment for <strong>${dbPayment.plan === 'single' ? 'Periodical Issue' : dbPayment.plan === '2_issues' ? '2 Publications Subscription' : dbPayment.plan === '3_issues' ? '3 Publications Subscription' : dbPayment.plan + ' Membership'}</strong>.</p>
                 
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
                   <tr style="border-bottom: 1px solid #eaeaea;">
@@ -340,6 +327,142 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
     }
 
     return res.status(200).json({ status: 'success' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Route: newsletter-subscribe
+app.post('/newsletter-subscribe', express.json(), async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Insert into newsletter_subscribers
+    const { error: insertError } = await supabaseAdmin
+      .from('newsletter_subscribers')
+      .insert({ email });
+
+    // Note: If duplicate, supabase might return an error, we can ignore or return already subscribed
+    if (insertError && insertError.code !== '23505') { // 23505 is unique violation in PG
+      console.error('Newsletter insert error:', insertError);
+      return res.status(500).json({ error: 'Failed to subscribe' });
+    }
+
+    // Send Welcome Email via Resend
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + resendApiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'The Art Ledger <noreply@infoartledger.com>',
+            to: [email],
+            subject: 'Welcome to The Art Ledger',
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+                <h2 style="font-family: serif; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 20px;">THE ART LEDGER</h2>
+                <p>Welcome to our editorial journal.</p>
+                <p>You have successfully subscribed to The Art Ledger newsletter. Expect curated insights on contemporary fine art, curatorial practices, and exclusive invitations to upcoming exhibitions directly in your inbox.</p>
+                <p style="margin-top: 30px; font-size: 12px; color: #767676; border-top: 1px solid #eaeaea; padding-top: 15px;">
+                  If you did not request this, you can safely ignore this email.
+                </p>
+              </div>
+            `
+          })
+        });
+        
+        if (!resendResponse.ok) {
+          const resendErr = await resendResponse.text();
+          console.error('Resend API returned error on newsletter:', resendErr);
+        }
+      } catch (e) {
+        console.error('Error sending newsletter email via Resend:', e);
+      }
+    }
+
+    return res.status(200).json({ status: 'success', message: 'Subscribed successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Route: forgot-password
+app.post('/forgot-password', express.json(), async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Generate password recovery link using Supabase Admin
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: 'http://localhost:5173/admin'
+      }
+    });
+
+    if (error) {
+      console.error('Generate recovery link error:', error);
+      return res.status(500).json({ error: 'Failed to generate recovery link' });
+    }
+
+    const recoveryUrl = data.properties.action_link;
+
+    // Send the link via Resend
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + resendApiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'The Art Ledger <noreply@infoartledger.com>',
+            to: [email],
+            subject: 'Password Recovery: The Art Ledger',
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+                <h2 style="font-family: serif; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 20px;">THE ART LEDGER</h2>
+                <p>We received a request to reset your password for your portal access.</p>
+                <p>Please click the secure link below to reset your password. If you are redirected to the admin portal, it means you have been authenticated securely to set a new password.</p>
+                
+                <div style="margin: 30px 0;">
+                  <a href="${recoveryUrl}" style="background-color: #1a1a1a; color: #ffffff; padding: 12px 24px; text-decoration: none; font-size: 14px; font-weight: bold; display: inline-block;">
+                    RESET PASSWORD
+                  </a>
+                </div>
+                
+                <p style="margin-top: 30px; font-size: 12px; color: #767676; border-top: 1px solid #eaeaea; padding-top: 15px;">
+                  If you did not request a password reset, please ignore this email or contact support if you have concerns.
+                </p>
+              </div>
+            `
+          })
+        });
+        
+        if (!resendResponse.ok) {
+          const resendErr = await resendResponse.text();
+          console.error('Resend API returned error on forgot password:', resendErr);
+        }
+      } catch (e) {
+        console.error('Error sending forgot password email via Resend:', e);
+      }
+    } else {
+      console.warn('RESEND_API_KEY missing, forgot password email not sent.');
+    }
+
+    return res.status(200).json({ status: 'success', message: 'Recovery email sent' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

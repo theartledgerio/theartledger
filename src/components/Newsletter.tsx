@@ -5,19 +5,41 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      setEmail('');
-    }, 4000);
+    if (!email) return;
+    
+    setStatus('loading');
+    setErrorMessage('');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/newsletter-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to subscribe');
+      }
+
+      setStatus('success');
+      setTimeout(() => {
+        setStatus('idle');
+        setEmail('');
+      }, 4000);
+    } catch (err: any) {
+      setStatus('error');
+      setErrorMessage(err.message || 'Error occurred');
+      setTimeout(() => setStatus('idle'), 4000);
+    }
   };
 
   return (
@@ -45,7 +67,7 @@ export default function Newsletter() {
 
         {/* Input form */}
         <AnimatePresence mode="wait">
-          {success ? (
+          {status === 'success' ? (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -76,20 +98,30 @@ export default function Newsletter() {
                 placeholder="Enter your curator email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-transparent border-none text-midnight text-sm outline-none px-2 py-3 placeholder:text-graycustom/60"
+                disabled={status === 'loading'}
+                className="flex-1 bg-transparent border-none text-midnight text-sm outline-none px-2 py-3 placeholder:text-graycustom/60 disabled:opacity-50"
               />
 
               <button
                 id="submit-newsletter-email"
                 type="submit"
-                className="group p-3 sm:px-6 rounded-full bg-midnight text-white hover:bg-gold hover:text-white font-sans font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-lg"
+                disabled={status === 'loading' || !email}
+                className="group p-3 sm:px-6 rounded-full bg-midnight text-white hover:bg-gold hover:text-white font-sans font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-lg disabled:opacity-50"
               >
                 <span className="hidden sm:inline">Subscribe</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                {status === 'loading' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                )}
               </button>
             </motion.form>
           )}
         </AnimatePresence>
+
+        {status === 'error' && (
+          <p className="text-xs text-red-500 mt-4">{errorMessage}</p>
+        )}
 
         <p className="text-[10px] font-mono text-graycustom mt-6 uppercase tracking-wider">
           NO SPAM. SHIELDED PRIVACY. CANCEL SUBSCRIPTION INSTANTLY.

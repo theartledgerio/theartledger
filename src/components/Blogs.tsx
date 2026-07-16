@@ -32,15 +32,23 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
         if (error) throw error;
 
         const filtered = (data || []).filter(item => item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e');
+        
+        const extractFirstImage = (htmlContent: string) => {
+          const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);
+          return match ? match[1] : null;
+        };
+
         const mapped: Blog[] = filtered.map((item, index) => {
           const wordCount = item.content ? item.content.split(/\s+/).length : 0;
           const readMin = Math.max(1, Math.ceil(wordCount / 200));
+          const firstImage = extractFirstImage(item.content || '');
+          
           return {
             id: item.id,
             title: item.title,
             excerpt: item.short_description || '',
             content: item.content || '',
-            image: item.image_url || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+            image: firstImage || item.image_url || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
             readingTime: `${readMin} min read`,
             author: item.name || 'Editorial Board',
             category: item.category || 'Contemporary',

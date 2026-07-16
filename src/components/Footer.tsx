@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowUp, Instagram, Twitter, Linkedin, Youtube, ExternalLink, Globe } from 'lucide-react';
+import { ArrowUp, Instagram, Twitter, Linkedin, Youtube, ExternalLink, Globe, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import Logo from './Logo';
 
 interface FooterProps {
@@ -22,6 +22,8 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+
 
   const handleBackToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -149,15 +151,6 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
                     Editorial Journal
                   </button>
                 </li>
-                <li>
-                  <button
-                    id="footer-nav-admin"
-                    onClick={() => onChangePage('admin')}
-                    className="hover:text-midnight transition-all duration-200 cursor-pointer hover:translate-x-1 transform inline-block font-bold text-[9px] tracking-widest font-mono text-midnight bg-midnight/5 px-2.5 py-1 rounded-md"
-                  >
-                    CURATOR PORTAL
-                  </button>
-                </li>
               </ul>
             </div>
 
@@ -206,6 +199,8 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
             </div>
 
           </div>
+          
+
 
           {/* Bottom Copyright Block */}
           <div className="flex flex-col sm:flex-row items-center justify-between pt-8 text-[11px] text-slate-500 font-mono">

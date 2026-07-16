@@ -33,11 +33,21 @@ export default function App() {
   // User & Authentication States
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [signInModalOpen, setSignInModalOpen] = useState(false);
+  const [portalRole, setPortalRole] = useState<'admin' | 'editor'>('admin');
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 1000);
+
+    if (window.location.pathname === '/editorial') {
+      setCurrentPage('admin');
+      setPortalRole('editor');
+    } else if (window.location.pathname === '/admin') {
+      setCurrentPage('admin');
+      setPortalRole('admin');
+    }
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -79,7 +89,7 @@ export default function App() {
       )}
 
       {currentPage === 'admin' ? (
-        <AdminPortal onChangePage={handlePageChange} />
+        <AdminPortal onChangePage={handlePageChange} portalRole={portalRole} />
       ) : (
         <main className="flex-grow pt-12">
           <AnimatePresence mode="wait">

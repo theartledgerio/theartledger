@@ -278,7 +278,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
     try {
       // Create payment order on the backend
-      const response = await fetch('http://localhost:3003/payment-create', {
+      const response = await fetch(`${API_BASE_URL}/payment-create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -317,7 +317,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           setIsPurchased(true);
           setIsPending(false);
 
-          await fetch('http://localhost:3003/payment-webhook', {
+          await fetch(`${API_BASE_URL}/payment-webhook`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -468,7 +468,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   }}
                   onMouseEnter={(e) => {
                     const target = e.currentTarget;
-                    target.style.transform = 'rotateY(-6deg) rotateX(4deg) rotateZ(-1deg) scale(1.05)';
+                    target.style.transform = 'rotateY(-6deg) rotateX(4deg) rotateZ(-1deg) scale(1.08)';
                   }}
                   onMouseLeave={(e) => {
                     const target = e.currentTarget;
@@ -477,7 +477,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 >
                   {/* Real 3D Ambient Shadow under the book */}
                   <div 
-                    className="absolute inset-4 bg-black/40 blur-2xl rounded-lg [transform:translateZ(-40px)_scale(0.95)] transition-all duration-[800ms] opacity-80 group-hover:opacity-100 group-hover:blur-3xl group-hover:[transform:translateZ(-50px)_scale(0.98)]"
+                    className="absolute inset-4 bg-turquoise/20 blur-2xl rounded-lg [transform:translateZ(-40px)_scale(0.95)] transition-all duration-[800ms] opacity-60 group-hover:opacity-100 group-hover:blur-3xl group-hover:bg-turquoise/40 group-hover:[transform:translateZ(-60px)_scale(1)]"
                   />
 
                   {/* Simulated Book Page Edges (Right side depth) */}

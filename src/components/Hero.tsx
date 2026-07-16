@@ -22,16 +22,19 @@ export default function Hero({ onChangePage }: HeroProps) {
         // Query latest blog post
         const { data: blogData } = await supabase
           .from('blog_submissions')
-          .select('title, image_url, category')
+          .select('title, image_url, category, content')
           .eq('status', 'approved')
           .order('published_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (blogData) {
+          const match = blogData.content ? blogData.content.match(/<img[^>]+src="([^">]+)"/) : null;
+          const firstImage = match ? match[1] : null;
+
           setLatestBlog({
             title: blogData.title,
-            image: blogData.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=600',
+            image: firstImage || blogData.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=600',
             category: blogData.category || 'Contemporary'
           });
         }
@@ -71,7 +74,7 @@ export default function Hero({ onChangePage }: HeroProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-16 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center relative z-10 mt-6 lg:mt-0">
-        
+
         {/* Left Column: Core Editorial Statement */}
         <div className="lg:col-span-7 flex flex-col justify-center text-left">
           <motion.h1
@@ -124,7 +127,7 @@ export default function Hero({ onChangePage }: HeroProps) {
         {/* Right Column: Layered Premium Cards with Overlaps */}
         <div className="lg:col-span-5 flex justify-center lg:justify-end items-center mt-8 lg:mt-0">
           <div className="relative w-full max-w-[420px] aspect-[4/5] flex items-center justify-center">
-            
+
             {/* Left Card: Exhibition Reviews (Back Layer / Last) */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, rotate: -10 }}
@@ -202,7 +205,7 @@ export default function Hero({ onChangePage }: HeroProps) {
                 </h3>
               </div>
             </motion.div>
-            
+
           </div>
         </div>
 

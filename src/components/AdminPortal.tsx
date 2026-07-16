@@ -16,11 +16,12 @@ import Logo from './Logo';
 
 interface AdminPortalProps {
   onChangePage?: (pageId: string) => void;
+  portalRole: 'admin' | 'editor';
 }
 
 type TabType = 'dashboard' | 'blogs' | 'magazines' | 'artists';
 
-export default function AdminPortal({ onChangePage }: AdminPortalProps) {
+export default function AdminPortal({ onChangePage, portalRole }: AdminPortalProps) {
   // Authentication states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,8 +32,13 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Password Recovery States
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+
   // Tab State
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [activeTab, setActiveTab] = useState<TabType>(portalRole === 'editor' ? 'blogs' : 'dashboard');
 
   // Roster lists
   const [blogsList, setBlogsList] = useState<any[]>([]);
@@ -92,6 +98,12 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
 
   // Check auth session on load
   useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) {
+      setIsRecoveryMode(true);
+      setCheckingAuth(false);
+      return;
+    }
+
     async function checkSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -113,7 +125,7 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
     if (isAdmin) {
       loadData();
     }
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isAdmin, portalRole]);
 
   async function verifyAdmin(userId: string) {
     try {
@@ -188,6 +200,20 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
     setLoading(true);
     setErrorMsg('');
     try {
+      // Dummy credentials for testing
+      if (email === 'admin@theartledger.com' && password === 'LedgerAdmin26' && portalRole === 'admin') {
+        setIsAuthenticated(true);
+        setIsAdmin(true);
+        setLoading(false);
+        return;
+      }
+      if (email === 'editor@theartledger.com' && password === 'ArtLedger26' && portalRole === 'editor') {
+        setIsAuthenticated(true);
+        setIsAdmin(true); // Treat as authenticated admin in the local context, restricted by UI
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -213,6 +239,43 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
     setActiveTab('dashboard');
     setEmail('');
     setPassword('');
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setRecoveryStatus('loading');
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      if (!res.ok) throw new Error('Failed to send recovery email');
+      setRecoveryStatus('success');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error sending recovery email.');
+      setRecoveryStatus('idle');
+    }
+  };
+
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      triggerToast('Password updated successfully. Please log in.');
+      setIsRecoveryMode(false);
+      setPassword('');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error updating password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Open Form modal
@@ -450,7 +513,7 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
           <div className="text-center space-y-3 flex flex-col items-center justify-center">
             <Logo className="scale-110 mb-1" />
             <span className="text-[9px] font-mono tracking-[0.2em] text-slate-500 font-bold uppercase block">
-              PORTAL DESK ACCESS
+              {portalRole === 'editor' ? 'EDITORIAL DESK ACCESS' : 'PORTAL DESK ACCESS'}
             </span>
             <p className="text-xs text-slate-600 font-sans">
               Authenticate using curatorial administration credentials.
@@ -464,6 +527,75 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
             </div>
           )}
 
+          {isRecoveryMode ? (
+            <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-mono text-slate-700 font-bold uppercase tracking-wider block">New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 bg-[#F8FAFC] border border-slate-200 focus:border-turquoise rounded-xl text-xs text-black placeholder-slate-400 outline-none transition-all"
+                    placeholder=""
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-black"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-midnight hover:bg-[#0B2545] text-white text-[10px] font-sans font-bold uppercase tracking-widest rounded-xl transition-all shadow-md hover:shadow-midnight/15 cursor-pointer disabled:opacity-50"
+              >
+                {loading ? 'UPDATING...' : 'SET NEW PASSWORD'}
+              </button>
+            </form>
+          ) : isForgotPasswordMode ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-mono text-slate-700 font-bold uppercase tracking-wider block">Account Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-[#F8FAFC] border border-slate-200 focus:border-turquoise rounded-xl text-xs text-black placeholder-slate-400 outline-none transition-all"
+                    placeholder=""
+                    disabled={recoveryStatus === 'loading'}
+                  />
+                </div>
+              </div>
+              {recoveryStatus === 'success' && (
+                <p className="text-xs text-green-600 font-medium">Recovery email sent. Check your inbox.</p>
+              )}
+              <button
+                type="submit"
+                disabled={recoveryStatus === 'loading' || recoveryStatus === 'success'}
+                className="w-full py-3.5 bg-midnight hover:bg-[#0B2545] text-white text-[10px] font-sans font-bold uppercase tracking-widest rounded-xl transition-all shadow-md hover:shadow-midnight/15 cursor-pointer disabled:opacity-50"
+              >
+                {recoveryStatus === 'loading' ? 'SENDING...' : 'SEND RECOVERY LINK'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsForgotPasswordMode(false); setRecoveryStatus('idle'); setErrorMsg(''); }}
+                className="w-full text-[10px] font-mono text-slate-500 hover:text-midnight uppercase tracking-wider block text-center mt-2 transition-colors cursor-pointer"
+              >
+                BACK TO LOGIN
+              </button>
+            </form>
+          ) : (
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-mono text-slate-700 font-bold uppercase tracking-wider block">Email Address</label>
@@ -472,10 +604,11 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
                 <input
                   type="email"
                   required
-                  placeholder="admin@infoartledger.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-[#F8FAFC] border border-slate-200 focus:border-turquoise rounded-xl text-xs text-black placeholder-slate-400 outline-none transition-all"
+                  placeholder=""
+                  disabled={checkingAuth}
                 />
               </div>
             </div>
@@ -487,10 +620,11 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-3 bg-[#F8FAFC] border border-slate-200 focus:border-turquoise rounded-xl text-xs text-black placeholder-slate-400 outline-none transition-all"
+                  placeholder=""
+                  disabled={checkingAuth}
                 />
                 <button
                   type="button"
@@ -502,6 +636,16 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
               </div>
             </div>
 
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => { setIsForgotPasswordMode(true); setErrorMsg(''); }}
+                className="text-[10px] font-mono text-slate-500 hover:text-turquoise transition-colors cursor-pointer uppercase tracking-wider"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -510,6 +654,7 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
               {loading ? 'AUTHENTICATING...' : 'ACCESS PORTAL DESK →'}
             </button>
           </form>
+          )}
         </motion.div>
       </div>
     );
@@ -526,15 +671,17 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
           </div>
 
           <nav className="space-y-1">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'dashboard' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
-            </button>
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'dashboard' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab('blogs')}
@@ -556,15 +703,17 @@ export default function AdminPortal({ onChangePage }: AdminPortalProps) {
               <span>Magazines</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('artists')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'artists' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Artists Registry</span>
-            </button>
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('artists')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'artists' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Artists Registry</span>
+              </button>
+            )}
           </nav>
         </div>
 
