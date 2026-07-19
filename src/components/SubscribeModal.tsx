@@ -10,7 +10,7 @@ interface SubscribeModalProps {
 }
 
 export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps) {
- const { formatPrice, currency } = useCurrency();
+ const { formatPrice, currency, addressData } = useCurrency();
  const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
  const [isSubmitted, setIsSubmitted] = useState(false);
  const [isPending, setIsPending] = useState(false);
@@ -19,6 +19,19 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  // Checkout states
  const [email, setEmail] = useState('');
  const [name, setName] = useState('');
+ const [address, setAddress] = useState('');
+ const [city, setCity] = useState('');
+ const [pincode, setPincode] = useState('');
+ const [country, setCountry] = useState('India');
+
+ React.useEffect(() => {
+   if (addressData) {
+     if (addressData.city) setCity(addressData.city);
+     if (addressData.country) setCountry(addressData.country);
+     if (addressData.postcode) setPincode(addressData.postcode);
+     if (addressData.state) setAddress(addressData.state);
+   }
+ }, [addressData]);
 
  const plans = [
  {
@@ -47,7 +60,10 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  plan: selectedPlan,
  name,
  email,
- country: currency === 'INR' ? 'India' : 'International',
+ address,
+ city,
+ pincode,
+ country,
  currency
  })
  });
@@ -186,17 +202,17 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
 
  {/* Plan Copy */}
  <div className="flex-1">
- <div className="flex items-center justify-between mb-1.5">
- <h4 className="font-sans font-bold text-sm text-midnight flex items-center gap-1.5">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0 mb-1.5">
+ <h4 className="font-sans font-bold text-sm text-midnight flex flex-wrap items-center gap-1.5">
  {plan.name}
  {plan.featured && (
- <span className="text-[8px] font-mono bg-turquoise text-white uppercase px-1.5 py-0.5 rounded tracking-widest">
+ <span className="text-[8px] font-mono bg-turquoise text-white uppercase px-1.5 py-0.5 rounded tracking-widest whitespace-nowrap mt-0.5">
  RECOMMENDED
  </span>
  )}
  </h4>
  
- <div className="flex items-baseline gap-0.5">
+ <div className="flex items-baseline gap-0.5 mt-1 sm:mt-0">
  <span className="text-base font-serif font-bold text-midnight ">{formatPrice(plan.priceInINR)}</span>
  <span className="text-[10px] text-graycustom ">/{plan.period}</span>
  </div>
@@ -262,6 +278,38 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
  onChange={(e) => setEmail(e.target.value)}
  className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-gray-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-darknavy "
  />
+ </div>
+
+ <div>
+ <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1">
+ Shipping Address
+ </label>
+ <input
+ type="text"
+ required
+ placeholder="Street Address"
+ value={address}
+ onChange={(e) => setAddress(e.target.value)}
+ className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-gray-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-darknavy mb-2"
+ />
+ <div className="grid grid-cols-2 gap-2">
+ <input
+ type="text"
+ required
+ placeholder="City"
+ value={city}
+ onChange={(e) => setCity(e.target.value)}
+ className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-gray-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-darknavy"
+ />
+ <input
+ type="text"
+ required
+ placeholder="Postal Code"
+ value={pincode}
+ onChange={(e) => setPincode(e.target.value)}
+ className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-gray-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-darknavy"
+ />
+ </div>
  </div>
 
  <div className="p-4 bg-slate-100 rounded-xl border border-slate-200/50 space-y-2 mt-4">

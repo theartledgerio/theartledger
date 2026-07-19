@@ -79,11 +79,13 @@ app.post('/payment-create', express.json(), async (req, res) => {
 
     let amount = 0;
     let desc = '';
+    let shippingFee = 0;
+    let isDigital = false;
 
     if ((plan === 'single' || plan === 'digital_single') && selected_issue) {
       const { data: magazine, error: dbError } = await supabaseAdmin
         .from('magazines')
-        .select('single_issue_price, digital_pdf_price, issue_name')
+        .select('single_issue_price, single_issue_price_usd, digital_pdf_price, digital_pdf_price_usd, shipping_inr, shipping_usd, issue_name')
         .eq('id', selected_issue)
         .single();
 
@@ -92,34 +94,34 @@ app.post('/payment-create', express.json(), async (req, res) => {
       }
       
       if (plan === 'digital_single') {
-        amount = (magazine.digital_pdf_price || 299) * quantity;
+        amount = currency === 'USD' 
+          ? (magazine.digital_pdf_price_usd || 10) * quantity
+          : (magazine.digital_pdf_price || 299) * quantity;
         desc = `TAL Digital PDF Purchase: ${magazine.issue_name}`;
+        isDigital = true;
       } else {
-        amount = (magazine.single_issue_price || 2500) * quantity;
+        amount = currency === 'USD'
+          ? (magazine.single_issue_price_usd || 30) * quantity
+          : (magazine.single_issue_price || 2500) * quantity;
         desc = `TAL Issue Purchase: ${magazine.issue_name}`;
+        
+        shippingFee = currency === 'USD'
+          ? (magazine.shipping_usd || 15)
+          : (magazine.shipping_inr || 150);
       }
     } else if (plan === '1_year') {
-      amount = 30000;
+      amount = currency === 'USD' ? 400 : 30000;
       desc = 'TAL Subscription: 1 Year';
+      shippingFee = currency === 'USD' ? 15 : 150;
     } else {
       return res.status(400).json({ error: 'Invalid plan or missing issue' });
     }
 
-    let shippingFee = 0;
-    if (plan === 'single' || plan === '1_year') {
-      if (currency === 'USD') {
-        shippingFee = 15; // $15 international shipping
-      } else {
-        const isIndia = (country || 'India').toLowerCase().trim() === 'india';
-        shippingFee = isIndia ? 150 : 2500;
-      }
-    }
-    // digital_single explicitly gets 0 shippingFee
     
-    const exchangeRate = 80;
-    if (currency === 'USD') {
-      amount = Math.ceil(amount / exchangeRate);
-    }
+    // If amount is already determined in USD, no need to divide by exchangeRate for USD
+    // because we dynamically assigned USD price in the above logic.
+    // The previous code divided amount / exchangeRate, but now amount is correct per currency.
+
 
     const totalAmount = amount + shippingFee;
     const amountInSubunits = Math.round(totalAmount * 100);
@@ -322,8 +324,30 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
                   </tr>
                   <tr style="border-bottom: 1px solid #eaeaea;">
                     <td style="padding: 8px 0; font-weight: bold; color: #767676;">Item Description</td>
-                    <td style="padding: 8px 0; text-align: right;">${dbPayment.plan === 'single' ? 'TAL Magazine Print Issue' : 'Premium Membership'}</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.plan === 'single' ? 'TAL Magazine Print Issue' : dbPayment.plan === 'digital_single' ? 'TAL Digital PDF Issue' : 'Premium Membership'}</td>
                   </tr>
+                  <tr style="border-bottom: 1px solid #eaeaea;">
+                    <td style="padding: 8px 0; font-weight: bold; color: #767676;">Contact Phone</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.phone || 'N/A'}</td>
+                  </tr>
+                  ${dbPayment.address ? `
+                  <tr style="border-bottom: 1px solid #eaeaea;">
+                    <td style="padding: 8px 0; font-weight: bold; color: #767676;">Shipping Address</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.address}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #eaeaea;">
+                    <td style="padding: 8px 0; font-weight: bold; color: #767676;">City & Pincode</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.city || ''} - ${dbPayment.pincode || ''}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #eaeaea;">
+                    <td style="padding: 8px 0; font-weight: bold; color: #767676;">Country</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.country || 'India'}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #eaeaea;">
+                    <td style="padding: 8px 0; font-weight: bold; color: #767676;">Shipping Fee</td>
+                    <td style="padding: 8px 0; text-align: right;">INR ${dbPayment.shipping_fee || 0}</td>
+                  </tr>
+                  ` : ''}
                 </table>
                 
                 <p>Your subscription features and digital ledger files have been unlocked in your collector workspace. If you purchased a physical print issue, it will be dispatched to your shipping address shortly.</p>
@@ -340,6 +364,68 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
         } else {
           const resendErr = await resendResponse.text();
           console.error('Resend API returned error:', resendErr);
+        }
+
+        // Send notification to Admin
+        console.log('Dispatching Resend admin notification...');
+        const adminHtml = `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+            <h2 style="font-family: serif; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 20px;">NEW ORDER RECEIVED</h2>
+            <p>A new order has been placed on The Art Ledger.</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Customer Name</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.name}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Customer Email</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.email}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Contact Phone</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.phone || 'N/A'}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Plan / Item</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.plan} (Issue: ${dbPayment.selected_issue || 'N/A'})</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Amount Paid</td>
+                <td style="padding: 8px 0; text-align: right;">INR ${dbPayment.amount}</td>
+              </tr>
+              ${dbPayment.address ? `
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Shipping Address</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.address}<br/>${dbPayment.city || ''} - ${dbPayment.pincode || ''}<br/>${dbPayment.country || 'India'}</td>
+              </tr>
+              ` : ''}
+              <tr style="border-bottom: 1px solid #eaeaea;">
+                <td style="padding: 8px 0; font-weight: bold; color: #767676;">Transaction ID</td>
+                <td style="padding: 8px 0; text-align: right; font-family: monospace;">${razorpayPaymentId}</td>
+              </tr>
+            </table>
+          </div>
+        `;
+
+        const adminResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + resendApiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'The Art Ledger Admin <noreply@infoartledger.com>',
+            to: ['theartledger00@gmail.com'],
+            subject: `New Order Alert: ${dbPayment.plan === 'single' ? 'Magazine Print' : dbPayment.plan === 'digital_single' ? 'Digital PDF' : 'Subscription'}`,
+            html: adminHtml
+          })
+        });
+
+        if (adminResponse.ok) {
+          console.log('Admin notification email sent successfully');
+        } else {
+          console.error('Admin Resend API returned error:', await adminResponse.text());
         }
       } catch (e) {
         console.error('Error sending email via Resend:', e);

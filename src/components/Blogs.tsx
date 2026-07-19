@@ -126,6 +126,11 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           // HOME LAYOUT: Render ONLY the single latest / featured blog with image on left and text on right
           featuredBlog ? (
             <div className="max-w-5xl mx-auto">
+              <div className="mb-4">
+                <span className="inline-block px-3.5 py-1 bg-midnight/80 backdrop-blur-md text-white text-[9px] font-mono uppercase tracking-widest rounded-full font-bold shadow-sm">
+                  LATEST ESSAY // {featuredBlog.category}
+                </span>
+              </div>
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -136,9 +141,6 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
               >
                 {/* Left Column: Photo cover (Image on Left) */}
                 <div className="md:col-span-5 overflow-hidden relative min-h-[320px] md:min-h-[460px]">
-                  <span className="absolute top-4 left-4 z-10 px-3.5 py-1 bg-midnight/80 backdrop-blur-md text-white text-[9px] font-mono uppercase tracking-widest rounded-full font-bold">
-                    LATEST ESSAY // {featuredBlog.category}
-                  </span>
                   <img
                     src={featuredBlog.image}
                     alt={featuredBlog.title}
@@ -223,6 +225,11 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
             {/* Left Hand: Featured Post Block (Taking 7 cols) */}
             {featuredBlog && (
               <div className="lg:col-span-7">
+                <div className="mb-4">
+                  <span className="inline-block px-3.5 py-1 bg-midnight text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold shadow-sm">
+                    {featuredBlog.category}
+                  </span>
+                </div>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -233,9 +240,6 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
                 >
                   {/* Photo cover */}
                   <div className="h-[300px] md:h-[450px] overflow-hidden relative">
-                    <span className="absolute top-4 left-4 z-10 px-3.5 py-1 bg-midnight text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold">
-                      {featuredBlog.category}
-                    </span>
                     <img
                       src={featuredBlog.image}
                       alt={featuredBlog.title}

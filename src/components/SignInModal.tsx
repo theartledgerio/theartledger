@@ -32,7 +32,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -48,7 +48,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-            className="relative w-full max-w-md bg-[#F8FAFC] rounded-[24px] p-8 shadow-2xl z-10 border border-slate-200"
+            className="relative w-full max-w-md bg-[#F8FAFC] rounded-[24px] p-6 md:p-8 shadow-2xl z-10 border border-slate-200 max-h-[95vh] overflow-y-auto no-scrollbar"
           >
             {/* Close Button */}
             <button
@@ -58,7 +58,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
               <X className="w-4 h-4" />
             </button>
 
-            <div className="space-y-6">
+            <div className="space-y-5 md:space-y-6">
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 rounded-full bg-turquoise/10 flex items-center justify-center text-turquoise mx-auto">
                   <Sparkles className="w-5 h-5" />
@@ -86,7 +86,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
                       placeholder="collector@artledger.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                      className="w-full pl-11 pr-4 py-2.5 md:py-3 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
                     />
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                      className="w-full pl-11 pr-4 py-2.5 md:py-3 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
                     />
                   </div>
                 </div>
@@ -111,7 +111,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
                 <button
                   type="submit"
                   disabled={isPending || !email || !password}
-                  className="w-full py-3.5 bg-midnight hover:bg-turquoise text-white font-sans text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="w-full py-3 md:py-3.5 bg-midnight hover:bg-turquoise text-white font-sans text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   {isPending ? (
                     <>

@@ -252,7 +252,7 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
             </div>
 
             {/* Right Side: Editorial Profile */}
-            <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-between bg-warmwhite">
+            <div className="md:col-span-7 p-6 md:p-12 flex flex-col justify-between bg-warmwhite">
               <div>
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <span className="flex items-center gap-1 text-xs text-graycustom font-mono">
@@ -373,7 +373,7 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         
         {/* Improved Section Header - Elegant Editorial Design */}
-        <div className="border-b border-offwhite/50 pb-6 mb-12 flex flex-row items-end justify-between gap-6">
+        <div className="border-b border-offwhite/50 pb-6 mb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 md:gap-6">
           <div>
             <span className="text-[10px] font-mono tracking-widest text-[#888] font-bold uppercase block mb-2">
               THE CONTEMPORARY ROSTER

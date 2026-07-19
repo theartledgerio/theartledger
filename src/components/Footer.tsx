@@ -39,11 +39,10 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
   return (
     <>
       {/* Floating Back to Top Button */}
-      <div 
+      <div
         id="back-to-top-container"
-        className={`fixed bottom-8 right-8 z-30 transition-all duration-300 transform ${
-          showBackToTop ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'
-        }`}
+        className={`fixed bottom-8 right-8 z-30 transition-all duration-300 transform ${showBackToTop ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'
+          }`}
       >
         <button
           id="back-to-top-btn"
@@ -61,7 +60,7 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
       >
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 pb-14 border-b border-[#EAE5D8]">
-            
+
             {/* Column 1: Brand & Bio (Takes 5 columns) */}
             <div className="md:col-span-5 space-y-6">
               <button
@@ -71,7 +70,7 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
               >
                 <Logo className="scale-90 origin-left" />
               </button>
-              
+
               <p className="text-xs md:text-sm text-slate-600 leading-relaxed max-w-sm">
                 The Art Ledger (TAL) is an independent monthly journal from India documenting contemporary fine art, curatorial practices, and creative frontiers with global aesthetic precision.
               </p>
@@ -160,11 +159,11 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
                 CURATORIAL OFFICE
               </h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                TAL Headquarters: <br />
+                TAL Headquarter: <br />
                 Unit No. 309, 3rd Floor, Tower A, SAS Tower, <br />
                 Sector 38, Gurugram, Haryana 122001, India
               </p>
-              
+
               <div className="text-xs space-y-2 text-slate-600 pt-1">
                 <p>
                   Contact:{" "}
@@ -190,13 +189,13 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
             </div>
 
           </div>
-          
+
 
 
           {/* Bottom Copyright Block */}
           <div className="flex flex-col sm:flex-row items-center justify-between pt-8 text-[11px] text-slate-500 font-mono">
             <p>© {new Date().getFullYear()} The Art Ledger. All Rights Reserved.</p>
-            
+
             <div className="flex flex-wrap items-center justify-center gap-6 mt-4 sm:mt-0">
               <a href="#" className="hover:text-midnight transition-colors">Privacy Charter</a>
               <a href="#" className="hover:text-midnight transition-colors">Collector Terms</a>

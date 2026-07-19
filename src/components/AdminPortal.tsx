@@ -70,14 +70,21 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [magSlug, setMagSlug] = useState('');
   const [magReleaseDate, setMagReleaseDate] = useState('');
   const [magPrice, setMagPrice] = useState('');
+  const [magPriceUsd, setMagPriceUsd] = useState('');
   const [magTagline, setMagTagline] = useState('');
   const [magShortSummary, setMagShortSummary] = useState('');
   const [magLongDescription, setMagLongDescription] = useState('');
   const [magCoverUrl, setMagCoverUrl] = useState('');
   const [magPdfUrl, setMagPdfUrl] = useState('');
   const [magDigitalPrice, setMagDigitalPrice] = useState('299');
+  const [magDigitalPriceUsd, setMagDigitalPriceUsd] = useState('10');
+  const [magShippingInr, setMagShippingInr] = useState('150');
+  const [magShippingUsd, setMagShippingUsd] = useState('15');
   const [magPreviewPages, setMagPreviewPages] = useState(''); // Comma separated URLs
   const [magStatus, setMagStatus] = useState('published');
+  const [magEditorNote, setMagEditorNote] = useState('');
+  const [magEditorName, setMagEditorName] = useState('');
+  const [magEditorImageUrl, setMagEditorImageUrl] = useState('');
 
   // 3. Artist
   const [artName, setArtName] = useState('');
@@ -306,15 +313,22 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setMagIssueName(item ? item.issue_name : '');
       setMagSlug(item ? item.slug : '');
       setMagReleaseDate(item ? item.release_date : '');
-      setMagPrice(item ? item.single_issue_price.toString() : '');
+      setMagPrice(item && item.single_issue_price ? item.single_issue_price.toString() : '');
+      setMagPriceUsd(item && item.single_issue_price_usd ? item.single_issue_price_usd.toString() : '');
       setMagTagline(item ? item.tagline || '' : '');
       setMagShortSummary(item ? item.short_summary || '' : '');
       setMagLongDescription(item ? item.long_description || '' : '');
       setMagCoverUrl(item ? item.cover_image_url || '' : '');
       setMagPdfUrl(item ? item.pdf_url || '' : '');
-      setMagDigitalPrice(item ? (item.digital_pdf_price || 299).toString() : '299');
+      setMagDigitalPrice(item && item.digital_pdf_price ? item.digital_pdf_price.toString() : '299');
+      setMagDigitalPriceUsd(item && item.digital_pdf_price_usd ? item.digital_pdf_price_usd.toString() : '10');
+      setMagShippingInr(item && item.shipping_inr ? item.shipping_inr.toString() : '150');
+      setMagShippingUsd(item && item.shipping_usd ? item.shipping_usd.toString() : '15');
       setMagPreviewPages(item && item.preview_pages ? item.preview_pages.join(', ') : '');
       setMagStatus(item ? item.status : 'published');
+      setMagEditorNote(item ? item.editor_note || '' : '');
+      setMagEditorName(item ? item.editor_name || '' : '');
+      setMagEditorImageUrl(item ? item.editor_image_url || '' : '');
     } else if (type === 'artist') {
       setArtName(item ? item.name : '');
       setArtShortBio(item ? item.short_bio || '' : '');
@@ -426,14 +440,21 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           slug: magSlug || magIssueName.toLowerCase().replace(/ /g, '-'),
           release_date: magReleaseDate || new Date().toISOString().split('T')[0],
           single_issue_price: parseFloat(magPrice) || 0.0,
+          single_issue_price_usd: parseFloat(magPriceUsd) || 0.0,
           digital_pdf_price: parseFloat(magDigitalPrice) || 299.0,
+          digital_pdf_price_usd: parseFloat(magDigitalPriceUsd) || 10.0,
+          shipping_inr: parseFloat(magShippingInr) || 150.0,
+          shipping_usd: parseFloat(magShippingUsd) || 15.0,
           pdf_url: magPdfUrl,
           preview_pages: magPreviewPages ? magPreviewPages.split(',').map(s => s.trim()).filter(s => s) : [],
           tagline: magTagline,
           short_summary: magShortSummary,
           long_description: magLongDescription,
           cover_image_url: magCoverUrl,
-          status: magStatus
+          status: magStatus,
+          editor_note: magEditorNote,
+          editor_name: magEditorName,
+          editor_image_url: magEditorImageUrl
         };
 
         if (formMode === 'create') {
@@ -1408,6 +1429,39 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         onChange={(e) => setMagTagline(e.target.value)}
                         placeholder="Exploring the intersection of bytes and canvas."
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Name</label>
+                      <input
+                        type="text"
+                        value={magEditorName}
+                        onChange={(e) => setMagEditorName(e.target.value)}
+                        placeholder="Elena Thorne"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Image URL</label>
+                      <input
+                        type="text"
+                        value={magEditorImageUrl}
+                        onChange={(e) => setMagEditorImageUrl(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Note</label>
+                      <textarea
+                        rows={3}
+                        value={magEditorNote}
+                        onChange={(e) => setMagEditorNote(e.target.value)}
+                        placeholder="A note from the editor..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none"
                       />
                     </div>
 

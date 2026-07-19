@@ -13,22 +13,31 @@ export default function NewsletterPopup({ heroHeight = 600 }: NewsletterPopupPro
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
-    // Check if user has already subscribed or dismissed in this session
-    const isDismissed = sessionStorage.getItem('tal_newsletter_dismissed') === 'true';
+    // Note: Temporarily disabling the sessionStorage check so you can test it easily!
+    // const isDismissed = sessionStorage.getItem('tal_newsletter_dismissed') === 'true';
     const isSubscribed = sessionStorage.getItem('tal_newsletter_subscribed') === 'true';
 
-    if (isDismissed || isSubscribed) return;
+    if (isSubscribed) return;
+
+    const triggerHeight = heroHeight / 2;
 
     const handleScroll = () => {
-      if (window.scrollY > heroHeight) {
+      if (window.scrollY > triggerHeight) {
         setIsOpen(true);
-        // Remove scroll listener once triggered
         window.removeEventListener('scroll', handleScroll);
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Check immediately in case they refresh while already scrolled down
+    if (window.scrollY > triggerHeight) {
+      setIsOpen(true);
+    } else {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [heroHeight]);
 
   const handleClose = () => {
@@ -85,20 +94,20 @@ export default function NewsletterPopup({ heroHeight = 600 }: NewsletterPopupPro
                 <div className="w-12 h-12 rounded-full bg-turquoise/10 flex items-center justify-center text-turquoise mx-auto animate-bounce">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <h4 className="text-lg font-serif font-bold text-midnight">Welcome to the Circle</h4>
+                <h4 className="text-lg font-serif font-bold text-midnight">Welcome to the Inner Circle</h4>
                 <p className="text-xs text-graycustom max-w-xs mx-auto leading-relaxed">
-                  Your subscription is verified. Weekly curations and art ledger updates will be delivered to your inbox.
+                  Your subscription is confirmed. Prepare for unparalleled insights into the global art market delivered directly to your inbox.
                 </p>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="space-y-2 text-center">
-                  <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block font-bold">TAL INTEL DISPATCH</span>
+                  <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block font-bold">THE ART LEDGER INSIDER</span>
                   <h3 className="text-2xl font-serif font-bold text-midnight leading-tight">
-                    Join the Curatorial Circle
+                    Elevate Your Collection
                   </h3>
                   <p className="text-xs text-graycustom max-w-xs mx-auto leading-relaxed">
-                    Receive weekly insights on fine art provenance, collector strategies, and exclusive invitations to upcoming AC exhibitions.
+                    Unlock exclusive access to expert market analysis, curated artist discoveries, and private invitations to our premium exhibitions.
                   </p>
                 </div>
 

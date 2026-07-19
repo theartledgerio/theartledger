@@ -16,6 +16,7 @@ import Blogs from './components/Blogs';
 import Newsletter from './components/Newsletter';
 import Footer from './components/Footer';
 import SubscribeModal from './components/SubscribeModal';
+import { useCurrency } from './CurrencyContext';
 import Logo from './components/Logo';
 import { Blog } from './types';
 import BlogPostPage from './components/BlogPostPage';
@@ -24,6 +25,7 @@ import SignInModal from './components/SignInModal';
 import NewsletterPopup from './components/NewsletterPopup';
 
 export default function App() {
+  const { locationStatus, isLoading: isLocationLoading } = useCurrency();
   const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSplash, setShowSplash] = useState(true);
@@ -67,7 +69,7 @@ export default function App() {
       className="min-h-screen flex flex-col font-sans bg-warmwhite text-darknavy selection:bg-turquoise/20 selection:text-turquoise"
     >
       {/* Premium Sticky Navigation */}
-      {currentPage !== 'admin' && (
+      {currentPage !== 'admin' && locationStatus === 'granted' && (
         <Navigation
           onOpenSubscribeModal={() => {
             if (!user) {
@@ -93,6 +95,35 @@ export default function App() {
       ) : (
         <main className="flex-grow pt-12">
           <AnimatePresence mode="wait">
+            {locationStatus === 'denied' ? (
+              <motion.div
+                key="access-denied"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="w-full h-[80vh] flex flex-col items-center justify-center p-8 text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-6">
+                  <X className="w-8 h-8" />
+                </div>
+                <h2 className="text-3xl font-serif font-bold text-midnight mb-4">Access Restricted</h2>
+                <p className="text-sm text-graycustom max-w-md leading-relaxed">
+                  The Art Ledger requires location access to authenticate regional availability and configure accurate curatorial shipping ledgers. 
+                  Please enable location permissions in your browser settings and refresh the page to proceed.
+                </p>
+              </motion.div>
+            ) : locationStatus === 'pending' || isLocationLoading ? (
+              <motion.div
+                key="location-loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="w-full h-[80vh] flex flex-col items-center justify-center p-8 text-center"
+              >
+                <Loader2 className="w-8 h-8 text-turquoise animate-spin mb-4" />
+                <p className="text-[10px] font-mono tracking-widest uppercase text-slate-500">
+                  Awaiting Location Clearance...
+                </p>
+              </motion.div>
+            ) : (
             <motion.div
               key={currentPage}
               initial={{ opacity: 0, y: 10 }}
@@ -199,11 +230,12 @@ export default function App() {
                 <BlogPostPage blog={activeBlog} onChangePage={handlePageChange} />
               )}
             </motion.div>
+            )}
           </AnimatePresence>
         </main>
       )}
 
-      {currentPage !== 'admin' && (
+      {currentPage !== 'admin' && locationStatus === 'granted' && (
         <Footer
           onChangePage={handlePageChange}
           onOpenSubscribeModal={() => setSubscribeModalOpen(true)}

@@ -21,6 +21,8 @@ interface MagazineEdition {
   digitalPrice?: number;
   pages: string[];
   editorNote?: string;
+  editorName?: string;
+  editorImageUrl?: string;
 }
 
 interface MagazineSectionProps {
@@ -31,19 +33,27 @@ interface MagazineSectionProps {
 }
 
 export default function MagazineSection({ isHome = false, onChangePage, user = null, onSignInClick }: MagazineSectionProps) {
-  const { formatPrice, currency } = useCurrency();
+  const { formatPrice, currency, addressData } = useCurrency();
   const [magazines, setMagazines] = useState<MagazineEdition[]>([]);
   const [activeIssue, setActiveIssue] = useState<MagazineEdition | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewPageIndex, setPreviewPageIndex] = useState(0);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [autoFlip, setAutoFlip] = useState(false);
   const [readingMode, setReadingMode] = useState<'dark' | 'light'>('dark');
   const [editorNoteExpanded, setEditorNoteExpanded] = useState(false);
+  const [isMobileReader, setIsMobileReader] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkSize = () => setIsMobileReader(window.innerWidth < 1024);
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
 
   useEffect(() => {
     setEditorNoteExpanded(false);
@@ -73,7 +83,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
     if (user?.email) {
       setShippingEmail(user.email);
     }
-  }, [user]);
+    if (addressData) {
+      if (addressData.city) setShippingCity(addressData.city);
+      if (addressData.country) setShippingCountry(addressData.country);
+      if (addressData.postcode) setShippingPincode(addressData.postcode);
+      if (addressData.state) setShippingAddress(addressData.state); // Using state as a fallback for street address if blank
+    }
+  }, [user, addressData]);
 
   // Load Razorpay Checkout SDK
   useEffect(() => {
@@ -135,7 +151,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600&h=850'
             ];
           }
-          
+
           return {
             id: m.id,
             issueNumber: `Issue No. ${m.issue_number}`,
@@ -147,7 +163,9 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             pdfUrl: m.pdf_url,
             digitalPrice: m.digital_pdf_price || 299,
             pages: previewPages,
-            editorNote: m.editor_note
+            editorNote: m.editor_note,
+            editorName: m.editor_name,
+            editorImageUrl: m.editor_image_url
           };
         });
 
@@ -167,13 +185,17 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
   useEffect(() => {
     let timer: any = null;
-    if (autoFlip && previewOpen) {
+    if (autoFlip && previewOpen && activeIssue) {
       timer = setInterval(() => {
-        setPreviewPageIndex(prev => (prev + 1) % 3);
+        setCurrentPageIndex(prev => {
+          const inc = isMobileReader ? 1 : 2;
+          if (prev + inc >= activeIssue.pages.length) return 0;
+          return prev + inc;
+        });
       }, 3500);
     }
     return () => clearInterval(timer);
-  }, [autoFlip, previewOpen]);
+  }, [autoFlip, previewOpen, isMobileReader, activeIssue]);
 
   const reverseGeocode = async (lat: number, lon: number) => {
     try {
@@ -187,7 +209,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         const stateVal = addr.state || '';
         const pincodeVal = addr.postcode || '';
         const countryVal = addr.country || 'India';
-        
+
         setShippingAddress(`${house} ${road}`.trim() || data.display_name || '');
         setShippingCity(cityVal || stateVal || '');
         setShippingPincode(pincodeVal || '');
@@ -384,7 +406,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
   return (
     <section id="magazine" className="py-16 md:py-24 bg-warmwhite">
-      
+
       {/* Standardized Section Header */}
       <div className="max-w-7xl mx-auto px-6 md:px-12 mb-12">
         <div className="border-b border-offwhite pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -401,13 +423,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           </p>
         </div>
       </div>
-      
+
       {/* 1. Main Issue Highlight Section */}
       <div className="max-w-7xl mx-auto px-6 md:px-12 mb-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-          
+
           {/* Left Column: Info and Buy Button */}
-          <div className="lg:col-span-7 space-y-8">
+          <div className="order-2 lg:order-1 lg:col-span-7 space-y-8 mt-6 lg:mt-0">
             <div className="space-y-4">
               <span className="text-[10px] font-mono tracking-[0.18em] text-midnight font-bold uppercase block">
                 {activeIssue.season.toUpperCase()}
@@ -475,11 +497,11 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           </div>
 
           {/* Right Column: Interactive 3D Mockup */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+          <div className="order-1 lg:order-2 lg:col-span-5 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-sm flex justify-center lg:justify-end [perspective:1800px]">
-              
+
               {/* Interactive 3D Magazine Book Container with Floating Animation */}
-              <motion.div 
+              <motion.div
                 animate={{ y: [0, -12, 0] }}
                 transition={{
                   duration: 6,
@@ -488,7 +510,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 }}
                 className="w-full max-w-[360px] flex justify-center lg:justify-end"
               >
-                <div 
+                <div
                   id="interactive-3d-magazine"
                   onClick={() => setPreviewOpen(true)}
                   className="relative w-full aspect-[3/4] [transform-style:preserve-3d] transition-all duration-[800ms] ease-out cursor-pointer group"
@@ -505,13 +527,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   }}
                 >
                   {/* Real 3D Ambient Shadow under the book */}
-                  <div 
+                  <div
                     className="absolute inset-4 bg-turquoise/20 blur-2xl rounded-lg [transform:translateZ(-40px)_scale(0.95)] transition-all duration-[800ms] opacity-60 group-hover:opacity-100 group-hover:blur-3xl group-hover:bg-turquoise/40 group-hover:[transform:translateZ(-60px)_scale(1)]"
                   />
 
                   {/* Simulated Book Page Edges (Right side depth) */}
-                  <div 
-                    className="absolute inset-y-1.5 right-0 w-[12px] bg-slate-100 rounded-r border-r border-y border-slate-300 [transform:rotateY(90deg)_translateZ(348px)] origin-right flex flex-col justify-between py-1 overflow-hidden"
+                  <div
+                    className="absolute inset-y-1.5 right-0 w-[12px] bg-slate-100 rounded-r border-r border-y border-slate-300 [transform:translateZ(10px)_rotateY(90deg)] origin-right flex flex-col justify-between py-1 overflow-hidden"
                     style={{ backfaceVisibility: 'hidden' }}
                   >
                     {[...Array(15)].map((_, i) => (
@@ -520,8 +542,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </div>
 
                   {/* Simulated Bottom Page Edges */}
-                  <div 
-                    className="absolute inset-x-1.5 bottom-0 h-[12px] bg-slate-100 rounded-b border-b border-x border-slate-300 [transform:rotateX(-90deg)_translateZ(468px)] origin-bottom flex gap-[2px] px-1 overflow-hidden"
+                  <div
+                    className="absolute inset-x-1.5 bottom-0 h-[12px] bg-slate-100 rounded-b border-b border-x border-slate-300 [transform:translateZ(10px)_rotateX(-90deg)] origin-bottom flex gap-[2px] px-1 overflow-hidden"
                     style={{ backfaceVisibility: 'hidden' }}
                   >
                     {[...Array(15)].map((_, i) => (
@@ -530,7 +552,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </div>
 
                   {/* Simulated Book Spine (Left side thickness) */}
-                  <div 
+                  <div
                     className="absolute inset-y-0 left-0 w-[16px] bg-gradient-to-r from-[#111] via-[#222] to-[#333] border-r border-black/30 [transform:rotateY(-90deg)_translateZ(8px)] origin-left flex items-center justify-center"
                     style={{ backfaceVisibility: 'hidden' }}
                   >
@@ -541,7 +563,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
                   {/* Front Cover Container with Z-Offset */}
                   <div className="absolute inset-0 w-full h-full rounded-l-sm rounded-r-xl overflow-hidden bg-white shadow-2xl [transform:translateZ(10px)] [backface-visibility:hidden] border border-slate-200/50">
-                    
+
                     {/* Actual Cover Image */}
                     <img
                       src={activeIssue.coverUrl}
@@ -549,13 +571,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
-                    
+
                     {/* Spine Fold / Hinge Indentation Line */}
                     <div className="absolute inset-y-0 left-[14px] w-[1px] bg-black/30 shadow-[1px_0_0_rgba(255,255,255,0.15)] pointer-events-none z-20" />
-                    
+
                     {/* Spine Soft Shadow Overlay */}
                     <div className="absolute inset-y-0 left-0 w-[14px] bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-10" />
-                    
+
                     {/* Real paper luster shine overlay */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/12 pointer-events-none mix-blend-overlay z-10" />
 
@@ -576,23 +598,25 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
       {/* 2. Editorial Perspective Banner (Circular Headshot + Big Quote) */}
       {!isHome && (
-        <div className="bg-[#0B132B] text-white py-20 border-t border-b border-turquoise/10 mb-28">
+        <div className="bg-[#0B132B] text-white py-20 mb-28">
           <div className="max-w-7xl mx-auto px-6 md:px-12">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              
+
               {/* Editor Circular Avatar */}
               <div className="lg:col-span-4 flex flex-col items-center justify-center text-center">
                 <div className="relative w-44 h-44 rounded-full overflow-hidden p-1 border-2 border-turquoise/30 mb-4 bg-slate-800">
                   <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=350&h=350"
-                    alt="Elena Thorne, Editor-in-Chief"
+                    src={activeIssue.editorImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=350&h=350"}
+                    alt={activeIssue.editorName || "Editor-in-Chief"}
                     className="w-full h-full object-cover rounded-full"
                     referrerPolicy="no-referrer"
                   />
                 </div>
-                <span className="px-3 py-1 bg-turquoise/10 border border-turquoise/20 rounded text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase">
-                  ELENA THORNE, EDITOR-IN-CHIEF
-                </span>
+                {activeIssue.editorName && (
+                  <span className="px-3 py-1 bg-turquoise/10 border border-turquoise/20 rounded text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase">
+                    {activeIssue.editorName}
+                  </span>
+                )}
               </div>
 
               {/* Quote details */}
@@ -600,11 +624,11 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 <span className="text-[10px] font-mono tracking-[0.18em] text-turquoise font-bold uppercase block">
                   Editorial Perspective
                 </span>
-                
-                <h3 className={`text-lg md:text-xl font-serif italic text-slate-200 leading-relaxed font-light tracking-wide transition-all duration-300 ${
-                  editorNoteExpanded ? '' : 'line-clamp-3 md:line-clamp-4'
-                }`}>
-                  {activeIssue.editorNote ? `"${activeIssue.editorNote}"` : `"We are witnessing a Digital Renaissance where the binary meets the brushstroke. ${activeIssue.issueNumber} isn't just about art; it's about the soul within the machine and the collectors who dare to preserve it."`}
+
+                <h3 className={`relative z-10 text-lg md:text-xl font-serif italic text-slate-200 leading-relaxed font-light tracking-wide transition-all duration-300 no-underline decoration-transparent ${editorNoteExpanded ? '' : 'line-clamp-3 md:line-clamp-4'
+                  }`}
+                  style={{ textDecoration: 'none' }}>
+                  {activeIssue.editorNote ? `"${activeIssue.editorNote.replace(/[\u0334-\u0336]/g, '')}"` : `"We are witnessing a Digital Renaissance where the binary meets the brushstroke. ${activeIssue.issueNumber} isn't just about art; it's about the soul within the machine and the collectors who dare to preserve it."`}
                 </h3>
 
                 <button
@@ -612,10 +636,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   className="text-[9px] font-mono tracking-widest text-turquoise hover:text-white uppercase font-bold transition-colors flex items-center gap-1 cursor-pointer mt-2"
                 >
                   <span>{editorNoteExpanded ? 'Read Less' : 'Read More'}</span>
-                  <span>{editorNoteExpanded ? '↑' : '↓'}</span>
                 </button>
-                
-                <div className="w-16 h-[2px] bg-turquoise/50 mt-4" />
               </div>
 
             </div>
@@ -627,7 +648,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       {!isHome && (
         <div className="max-w-7xl mx-auto px-6 md:px-12 mb-28">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-            
+
             {/* Left Column: Sticky Editorial Text */}
             <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-6">
               <span className="text-[10px] font-mono tracking-[0.2em] text-turquoise font-bold uppercase block">
@@ -650,17 +671,16 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     key={issue.id}
                     onClick={() => {
                       setActiveIssue(issue);
-                      setPreviewPageIndex(0);
+                      setCurrentPageIndex(0);
                       const el = document.getElementById('magazine');
                       if (el) {
                         el.scrollIntoView({ behavior: 'smooth' });
                       }
                     }}
-                    className={`w-full max-w-[240px] mx-auto group cursor-pointer p-3 rounded-[24px] border transition-all duration-300 ${
-                      activeIssue.id === issue.id 
-                        ? 'border-turquoise bg-turquoise/5 shadow-md shadow-turquoise/5' 
-                        : 'border-slate-100 hover:border-slate-200 bg-transparent'
-                    }`}
+                    className={`w-full max-w-[240px] mx-auto group cursor-pointer p-3 rounded-[24px] border transition-all duration-300 ${activeIssue.id === issue.id
+                      ? 'border-turquoise bg-turquoise/5 shadow-md shadow-turquoise/5'
+                      : 'border-slate-100 hover:border-slate-200 bg-transparent'
+                      }`}
                   >
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden relative shadow-lg bg-slate-100 border border-slate-200/50 mb-4 transform group-hover:-translate-y-1 transition-transform duration-300">
                       <img
@@ -696,7 +716,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       {/* FLIPBOOK PREVIEW MODAL */}
       <AnimatePresence>
         {previewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -710,7 +730,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 120 }}
-              className="relative w-full max-w-5xl bg-warmwhite rounded-3xl p-5 md:p-6 shadow-2xl z-10 border border-[#EAE5D8]/45"
+              className="relative w-full h-full md:h-auto md:max-w-5xl bg-warmwhite rounded-none md:rounded-3xl p-4 md:p-6 shadow-2xl z-10 border-0 md:border border-[#EAE5D8]/45 flex flex-col"
             >
               {/* Header Title (Clean, no buttons) */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-3 border-b border-slate-100/60 mb-4 gap-2">
@@ -723,37 +743,27 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </h4>
                 </div>
                 <span className="text-[10px] font-mono text-graycustom mt-1 md:mt-0 font-bold bg-slate-100 px-3 py-1 rounded-full border border-slate-200/50">
-                  Spread {previewPageIndex + 1} / 3
+                  {isMobileReader ? `Page ${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
                 </span>
               </div>
 
               {/* Spread Page Container (Perspective Book Spread) */}
-              <div className={`relative w-full aspect-[4/5] sm:aspect-[3/4] md:aspect-[16/10] rounded-2xl p-4 md:p-6 flex justify-center items-center overflow-hidden transition-colors duration-500 [perspective:2000px] ${
-                readingMode === 'dark' 
-                  ? 'bg-[#090D16] shadow-2xl' 
-                  : 'bg-[#FAF8F5] shadow-xl'
-              }`}>
-                
-                {/* 3D Book Case / Cover Backdrop */}
-                <div className={`absolute inset-y-4 inset-x-4 md:inset-x-5 rounded-lg shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500 pointer-events-none z-0 ${
-                  readingMode === 'dark'
-                    ? 'bg-[#181512]'
-                    : 'bg-[#4E3F35]'
-                }`} />
+              <div className={`relative w-full flex-1 md:aspect-[16/10] rounded-none md:rounded-2xl flex justify-center items-center overflow-hidden transition-colors duration-500 [perspective:3000px] ${readingMode === 'dark'
+                ? 'bg-[#090D16] shadow-2xl'
+                : 'bg-[#FAF8F5] shadow-xl'
+                }`}>
 
                 {/* Immersive Floating Glassmorphic Toolbar */}
                 <div className="absolute top-4 md:top-6 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[95%] md:max-w-[90%]">
-                  <div className={`flex items-center justify-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 rounded-full border shadow-xl backdrop-blur-md transition-all duration-500 ${
-                    readingMode === 'dark'
-                      ? 'bg-[#0B0F19]/85 border-white/10 text-white shadow-black/40'
-                      : 'bg-white/80 border-slate-200/60 text-midnight shadow-slate-200/30'
-                  }`}>
+                  <div className={`flex items-center justify-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 rounded-full border shadow-xl backdrop-blur-md transition-all duration-500 ${readingMode === 'dark'
+                    ? 'bg-[#0B0F19]/85 border-white/10 text-white shadow-black/40'
+                    : 'bg-white/80 border-slate-200/60 text-midnight shadow-slate-200/30'
+                    }`}>
                     {/* Theme Toggle */}
                     <button
                       onClick={() => setReadingMode(prev => prev === 'dark' ? 'light' : 'dark')}
-                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                        readingMode === 'dark' ? 'hover:bg-white/10 text-amber-400' : 'hover:bg-black/5 text-slate-500 hover:text-midnight'
-                      }`}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${readingMode === 'dark' ? 'hover:bg-white/10 text-amber-400' : 'hover:bg-black/5 text-slate-500 hover:text-midnight'
+                        }`}
                       title={readingMode === 'dark' ? 'Light Reading Mode' : 'Dark Reading Mode'}
                     >
                       {readingMode === 'dark' ? <Sun className="w-3.5 h-3.5 animate-pulse" /> : <Moon className="w-3.5 h-3.5" />}
@@ -764,13 +774,12 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     {/* Auto Flip */}
                     <button
                       onClick={() => setAutoFlip(!autoFlip)}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                        autoFlip
-                          ? 'bg-turquoise text-white'
-                          : readingMode === 'dark'
-                            ? 'hover:bg-white/10 text-slate-300'
-                            : 'hover:bg-black/5 text-graycustom hover:text-midnight'
-                      }`}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[8px] font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer ${autoFlip
+                        ? 'bg-turquoise text-white'
+                        : readingMode === 'dark'
+                          ? 'hover:bg-white/10 text-slate-300'
+                          : 'hover:bg-black/5 text-graycustom hover:text-midnight'
+                        }`}
                       title={autoFlip ? 'Pause Turning' : 'Play Auto-Turn'}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
@@ -782,9 +791,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     {/* Share Button */}
                     <button
                       onClick={handleShareClick}
-                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                        readingMode === 'dark' ? 'hover:bg-white/10 text-slate-300 hover:text-white' : 'hover:bg-black/5 text-slate-500 hover:text-midnight'
-                      }`}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${readingMode === 'dark' ? 'hover:bg-white/10 text-slate-300 hover:text-white' : 'hover:bg-black/5 text-slate-500 hover:text-midnight'
+                        }`}
                       title="Share Catalog Link"
                     >
                       <Share2 className="w-3.5 h-3.5" />
@@ -795,9 +803,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     {/* Close Cross Button */}
                     <button
                       onClick={() => setPreviewOpen(false)}
-                      className={`p-1.5 rounded-full transition-colors cursor-pointer group ${
-                        readingMode === 'dark' ? 'hover:bg-white/10 text-slate-300 hover:text-red-400' : 'hover:bg-black/5 text-slate-500 hover:text-red-500'
-                      }`}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer group ${readingMode === 'dark' ? 'hover:bg-white/10 text-slate-300 hover:text-red-400' : 'hover:bg-black/5 text-slate-500 hover:text-red-500'
+                        }`}
                       title="Close Preview"
                     >
                       <X className="w-3.5 h-3.5 transition-transform group-hover:rotate-90 duration-200" />
@@ -806,30 +813,31 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 </div>
 
                 {/* Inner Pages Container */}
-                <div className="relative w-[96%] h-[92%] flex gap-0 z-10 pointer-events-none">
-                  {/* Left Page (Even Index) */}
-                  <div className="w-1/2 h-full rounded-l overflow-hidden relative bg-white shadow-[inset_-30px_0_40px_rgba(0,0,0,0.12),-10px_10px_20px_rgba(0,0,0,0.25)] pointer-events-auto">
+                <div className="relative w-full h-full flex gap-0 z-10 pointer-events-none justify-center">
+                  {/* Left/Single Page */}
+                  <div className={`${isMobileReader ? 'w-full max-w-[500px] rounded' : 'w-1/2 rounded-l'} h-full overflow-hidden relative bg-white shadow-[inset_-30px_0_40px_rgba(0,0,0,0.12),-10px_10px_20px_rgba(0,0,0,0.25)] pointer-events-auto`}>
                     <AnimatePresence>
                       <motion.div
-                        key={`left-${previewPageIndex}`}
-                        initial={{ rotateY: 45, transformOrigin: 'right center', opacity: 0 }}
+                        key={`left-${currentPageIndex}`}
+                        initial={{ rotateY: 90, transformOrigin: 'right center', opacity: 0 }}
                         animate={{ rotateY: 0, opacity: 1 }}
-                        exit={{ rotateY: -45, transformOrigin: 'right center', opacity: 0 }}
-                        transition={{ duration: 0.65, ease: [0.25, 1, 0.5, 1] }}
+                        exit={{ rotateY: -90, transformOrigin: 'right center', opacity: 0 }}
+                        transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
                         className="absolute inset-0 w-full h-full"
                       >
                         <img
-                          src={activeIssue.pages[previewPageIndex * 2]}
-                          alt="Left page"
+                          src={activeIssue.pages[currentPageIndex]}
+                          alt="Magazine page"
                           className="w-full h-full object-cover md:object-fill"
                           referrerPolicy="no-referrer"
                         />
                         {/* Page lighting crease overlay */}
-                        <div className={`absolute inset-y-0 right-0 w-24 pointer-events-none transition-all duration-500 ${
-                          readingMode === 'dark' 
-                            ? 'bg-gradient-to-l from-black/25 via-black/5 to-transparent' 
+                        {!isMobileReader && (
+                          <div className={`absolute inset-y-0 right-0 w-24 pointer-events-none transition-all duration-500 ${readingMode === 'dark'
+                            ? 'bg-gradient-to-l from-black/25 via-black/5 to-transparent'
                             : 'bg-gradient-to-l from-black/15 via-black/0 to-transparent'
-                        }`} />
+                            }`} />
+                        )}
                         <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white/10 to-transparent pointer-events-none" />
 
                         {/* Warm paper tone overlay in light reading mode */}
@@ -840,81 +848,86 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     </AnimatePresence>
                   </div>
 
-                  {/* Right Page (Odd Index) */}
-                  <div className="w-1/2 h-full rounded-r overflow-hidden relative bg-white shadow-[inset_30px_0_40px_rgba(0,0,0,0.12),10px_10px_20px_rgba(0,0,0,0.25)] pointer-events-auto">
-                    <AnimatePresence>
-                      <motion.div
-                        key={`right-${previewPageIndex}`}
-                        initial={{ rotateY: -45, transformOrigin: 'left center', opacity: 0 }}
-                        animate={{ rotateY: 0, opacity: 1 }}
-                        exit={{ rotateY: 45, transformOrigin: 'left center', opacity: 0 }}
-                        transition={{ duration: 0.65, ease: [0.25, 1, 0.5, 1] }}
-                        className="absolute inset-0 w-full h-full"
-                      >
-                        <img
-                          src={activeIssue.pages[previewPageIndex * 2 + 1]}
-                          alt="Right page"
-                          className="w-full h-full object-cover md:object-fill"
-                          referrerPolicy="no-referrer"
-                        />
-                        {/* Page lighting crease overlay */}
-                        <div className={`absolute inset-y-0 left-0 w-24 pointer-events-none transition-all duration-500 ${
-                          readingMode === 'dark' 
-                            ? 'bg-gradient-to-r from-black/25 via-black/5 to-transparent' 
+                  {/* Right Page (Hidden on Mobile) */}
+                  {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
+                    <div className="w-1/2 h-full rounded-r overflow-hidden relative bg-white shadow-[inset_30px_0_40px_rgba(0,0,0,0.12),10px_10px_20px_rgba(0,0,0,0.25)] pointer-events-auto">
+                      <AnimatePresence>
+                        <motion.div
+                          key={`right-${currentPageIndex + 1}`}
+                          initial={{ rotateY: -45, transformOrigin: 'left center', opacity: 0 }}
+                          animate={{ rotateY: 0, opacity: 1 }}
+                          exit={{ rotateY: 45, transformOrigin: 'left center', opacity: 0 }}
+                          transition={{ duration: 0.65, ease: [0.25, 1, 0.5, 1] }}
+                          className="absolute inset-0 w-full h-full"
+                        >
+                          <img
+                            src={activeIssue.pages[currentPageIndex + 1]}
+                            alt="Right page"
+                            className="w-full h-full object-cover md:object-fill"
+                            referrerPolicy="no-referrer"
+                          />
+                          {/* Page lighting crease overlay */}
+                          <div className={`absolute inset-y-0 left-0 w-24 pointer-events-none transition-all duration-500 ${readingMode === 'dark'
+                            ? 'bg-gradient-to-r from-black/25 via-black/5 to-transparent'
                             : 'bg-gradient-to-r from-black/15 via-black/0 to-transparent'
+                            }`} />
+                          <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
+
+                          {/* Warm paper tone overlay in light reading mode */}
+                          {readingMode === 'light' && (
+                            <div className="absolute inset-0 bg-[#F4F1EA]/15 pointer-events-none mix-blend-multiply z-10" />
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Realistic 3D Spine and shadow seam (Hidden on Mobile) */}
+                  {!isMobileReader && (
+                    <>
+                      <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-4 z-20 pointer-events-none transition-all duration-500 ${readingMode === 'dark'
+                        ? 'bg-gradient-to-r from-black/35 via-black/15 to-black/35'
+                        : 'bg-gradient-to-r from-black/20 via-black/5 to-black/20'
                         }`} />
-                        <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
-
-                        {/* Warm paper tone overlay in light reading mode */}
-                        {readingMode === 'light' && (
-                          <div className="absolute inset-0 bg-[#F4F1EA]/15 pointer-events-none mix-blend-multiply z-10" />
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Realistic 3D Spine and shadow seam */}
-                  <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-4 z-20 pointer-events-none transition-all duration-500 ${
-                    readingMode === 'dark'
-                      ? 'bg-gradient-to-r from-black/35 via-black/15 to-black/35'
-                      : 'bg-gradient-to-r from-black/20 via-black/5 to-black/20'
-                  }`} />
-                  <div className="absolute inset-y-0 left-1/2 -translate-x-[1px] w-[2px] bg-black/10 z-30 pointer-events-none" />
+                      <div className="absolute inset-y-0 left-1/2 -translate-x-[1px] w-[2px] bg-black/10 z-30 pointer-events-none" />
+                    </>
+                  )}
                 </div>
 
                 {/* Left Turn Indicator */}
-                {previewPageIndex > 0 && (
+                {currentPageIndex > 0 && (
                   <button
-                    onClick={() => { setPreviewPageIndex(prev => prev - 1); setAutoFlip(false); }}
-                    className="absolute left-8 top-1/2 -translate-y-1/2 p-3.5 rounded-full bg-midnight/90 hover:bg-turquoise text-white transition-colors cursor-pointer z-30 flex items-center justify-center hover:scale-105 transform duration-200 border border-white/10 shadow-lg"
+                    onClick={() => { setCurrentPageIndex(prev => Math.max(0, prev - (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                    className="absolute left-2 lg:left-8 top-1/2 -translate-y-1/2 p-2 lg:p-3.5 rounded-full bg-midnight/90 hover:bg-turquoise text-white transition-colors cursor-pointer z-30 flex items-center justify-center hover:scale-105 transform duration-200 border border-white/10 shadow-lg"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-6 h-6 md:w-5 md:h-5" />
                   </button>
                 )}
 
                 {/* Right Turn Indicator */}
-                {previewPageIndex < 2 && (
+                {currentPageIndex + (isMobileReader ? 1 : 2) < activeIssue.pages.length && (
                   <button
-                    onClick={() => { setPreviewPageIndex(prev => prev + 1); setAutoFlip(false); }}
-                    className="absolute right-8 top-1/2 -translate-y-1/2 p-3.5 rounded-full bg-midnight/90 hover:bg-turquoise text-white transition-colors cursor-pointer z-30 flex items-center justify-center hover:scale-105 transform duration-200 border border-white/10 shadow-lg"
+                    onClick={() => { setCurrentPageIndex(prev => Math.min(activeIssue.pages.length - 1, prev + (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                    className="absolute right-2 lg:right-8 top-1/2 -translate-y-1/2 p-2 lg:p-3.5 rounded-full bg-midnight/90 hover:bg-turquoise text-white transition-colors cursor-pointer z-30 flex items-center justify-center hover:scale-105 transform duration-200 border border-white/10 shadow-lg"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-6 h-6 md:w-5 md:h-5" />
                   </button>
                 )}
               </div>
 
               {/* Spread Dots Selector Navigation */}
-              <div className="flex justify-center items-center gap-3 mt-4">
-                {[0, 1, 2].map((idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => { setPreviewPageIndex(idx); setAutoFlip(false); }}
-                    className={`h-2 rounded-full transition-all duration-350 cursor-pointer ${
-                      previewPageIndex === idx ? 'w-6 bg-turquoise' : 'w-2 bg-slate-300 hover:bg-slate-400'
-                    }`}
-                    title={`Spread ${idx + 1}`}
-                  />
-                ))}
+              <div className="flex justify-center items-center gap-3 mt-4 flex-wrap">
+                {Array.from({ length: isMobileReader ? activeIssue.pages.length : Math.ceil(activeIssue.pages.length / 2) }).map((_, idx) => {
+                  const targetIndex = isMobileReader ? idx : idx * 2;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => { setCurrentPageIndex(targetIndex); setAutoFlip(false); }}
+                      className={`h-2 rounded-full transition-all duration-350 cursor-pointer ${currentPageIndex === targetIndex ? 'w-6 bg-turquoise' : 'w-2 bg-slate-300 hover:bg-slate-400'}`}
+                      title={isMobileReader ? `Page ${idx + 1}` : `Spread ${idx + 1}`}
+                    />
+                  );
+                })}
               </div>
 
               {/* Warning Notice footer */}
@@ -1041,7 +1054,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         </label>
                         <input
                           type="text"
-                          required={purchasePlan !== 'digital_single'}
+                          required
                           placeholder="Street address, apartment, suite"
                           value={shippingAddress}
                           onChange={(e) => setShippingAddress(e.target.value)}
@@ -1056,7 +1069,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                           </label>
                           <input
                             type="text"
-                            required={purchasePlan !== 'digital_single'}
+                            required
                             placeholder="Mumbai"
                             value={shippingCity}
                             onChange={(e) => setShippingCity(e.target.value)}
@@ -1069,7 +1082,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                           </label>
                           <input
                             type="text"
-                            required={purchasePlan !== 'digital_single'}
+                            required
                             placeholder="400001"
                             value={shippingPincode}
                             onChange={(e) => setShippingPincode(e.target.value)}
