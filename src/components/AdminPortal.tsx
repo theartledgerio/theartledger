@@ -446,15 +446,8 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           shipping_inr: parseFloat(magShippingInr) || 150.0,
           shipping_usd: parseFloat(magShippingUsd) || 15.0,
           pdf_url: magPdfUrl,
-          preview_pages: magPreviewPages ? magPreviewPages.split(',').map(s => s.trim()).filter(s => s) : [],
-          tagline: magTagline,
-          short_summary: magShortSummary,
-          long_description: magLongDescription,
           cover_image_url: magCoverUrl,
-          status: magStatus,
-          editor_note: magEditorNote,
-          editor_name: magEditorName,
-          editor_image_url: magEditorImageUrl
+          status: magStatus
         };
 
         if (formMode === 'create') {
@@ -1409,83 +1402,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Preview Pages URLs</label>
-                      <input
-                        type="text"
-                        value={magPreviewPages}
-                        onChange={(e) => setMagPreviewPages(e.target.value)}
-                        placeholder="https://image1.jpg, https://image2.jpg"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                      <p className="text-[9px] text-slate-400 font-mono">Comma-separated URLs for the magazine preview carousel.</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Tagline</label>
-                      <input
-                        type="text"
-                        value={magTagline}
-                        onChange={(e) => setMagTagline(e.target.value)}
-                        placeholder="Exploring the intersection of bytes and canvas."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Name</label>
-                      <input
-                        type="text"
-                        value={magEditorName}
-                        onChange={(e) => setMagEditorName(e.target.value)}
-                        placeholder="Elena Thorne"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Image URL</label>
-                      <input
-                        type="text"
-                        value={magEditorImageUrl}
-                        onChange={(e) => setMagEditorImageUrl(e.target.value)}
-                        placeholder="https://images.unsplash.com/..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor Note</label>
-                      <textarea
-                        rows={3}
-                        value={magEditorNote}
-                        onChange={(e) => setMagEditorNote(e.target.value)}
-                        placeholder="A note from the editor..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Short Summary</label>
-                      <input
-                        type="text"
-                        value={magShortSummary}
-                        onChange={(e) => setMagShortSummary(e.target.value)}
-                        placeholder="Minimalist summary..."
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Long Description</label>
-                      <textarea
-                        rows={4}
-                        value={magLongDescription}
-                        onChange={(e) => setMagLongDescription(e.target.value)}
-                        placeholder="Full review of this issue's curatorial agenda..."
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none"
-                      />
-                    </div>
                   </div>
                 )}
 

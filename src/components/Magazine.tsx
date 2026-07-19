@@ -480,8 +480,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 onClick={() => setPreviewOpen(true)}
                 className="flex items-center gap-2.5 px-8 py-4 rounded-full border border-slate-200 text-midnight hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer"
               >
-                <Download className="w-4 h-4" />
-                <span>Download PDF</span>
+                <BookOpen className="w-4 h-4" />
+                <span>Preview Magazine</span>
               </button>
 
               {isHome && onChangePage && (
@@ -978,9 +978,21 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   <p className="text-xs text-graycustom max-w-xs mx-auto mb-4 leading-relaxed">
                     Transaction successful. Your permanent high-fidelity digital compilation has been unlocked. Check your inbox for download credentials.
                   </p>
-                  <span className="text-[10px] font-mono text-turquoise tracking-wider uppercase bg-turquoise/5 border border-turquoise/15 px-3 py-1.5 rounded-full font-bold">
+                  <span className="inline-block text-[10px] font-mono text-turquoise tracking-wider uppercase bg-turquoise/5 border border-turquoise/15 px-3 py-1.5 rounded-full font-bold mb-6">
                     PAYMENT ID: {receiptId}
                   </span>
+                  
+                  {purchasePlan === 'digital_single' && activeIssue.pdfUrl && (
+                    <a
+                      href={activeIssue.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full rounded-xl bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Your PDF</span>
+                    </a>
+                  )}
                 </motion.div>
               ) : (
                 <form onSubmit={handlePurchaseSubmit} className="space-y-4">
