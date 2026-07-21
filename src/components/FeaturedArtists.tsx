@@ -103,8 +103,8 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
               <p className="text-graycustom font-sans text-xs font-medium">Loading Registry...</p>
             </div>
           ) : (
-            /* 3-per-row Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            /* 5-per-row Grid */
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {artists.map((artist, idx) => (
                 <motion.div
                   key={artist.id}
@@ -124,6 +124,7 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                       <img
                         src={artist.portrait}
                         alt={artist.name}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
                         referrerPolicy="no-referrer"
                       />

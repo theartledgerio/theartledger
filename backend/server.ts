@@ -9,6 +9,12 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3003;
 
+// Production Environment Constants & Email Mappings
+const FROM_EMAIL = process.env.FROM_EMAIL || 'The Art Ledger <noreply@infoartledger.com>';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'theartledger00@gmail.com';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'curations@infoartledger.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://13.232.65.37:3004';
+
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 
 // Configure Supabase client
@@ -304,7 +310,8 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'The Art Ledger <noreply@infoartledger.com>',
+            from: FROM_EMAIL,
+            reply_to: SUPPORT_EMAIL,
             to: [dbPayment.email],
             subject: `Thank you for your purchase: The Art Ledger`,
             html: `
@@ -320,7 +327,7 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
                   </tr>
                   <tr style="border-bottom: 1px solid #eaeaea;">
                     <td style="padding: 8px 0; font-weight: bold; color: #767676;">Amount Paid</td>
-                    <td style="padding: 8px 0; text-align: right;">INR ${dbPayment.amount}</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.currency === 'USD' ? '$' : 'INR '} ${dbPayment.amount}</td>
                   </tr>
                   <tr style="border-bottom: 1px solid #eaeaea;">
                     <td style="padding: 8px 0; font-weight: bold; color: #767676;">Item Description</td>
@@ -345,14 +352,14 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
                   </tr>
                   <tr style="border-bottom: 1px solid #eaeaea;">
                     <td style="padding: 8px 0; font-weight: bold; color: #767676;">Shipping Fee</td>
-                    <td style="padding: 8px 0; text-align: right;">INR ${dbPayment.shipping_fee || 0}</td>
+                    <td style="padding: 8px 0; text-align: right;">${dbPayment.currency === 'USD' ? '$' : 'INR '} ${dbPayment.shipping_fee || 0}</td>
                   </tr>
                   ` : ''}
                 </table>
                 
                 <p>Your subscription features and digital ledger files have been unlocked in your collector workspace. If you purchased a physical print issue, it will be dispatched to your shipping address shortly.</p>
                 <p style="margin-top: 30px; font-size: 12px; color: #767676; border-top: 1px solid #eaeaea; padding-top: 15px;">
-                  This is an automated receipt email. If you have any inquiries, contact curations@infoartledger.com.
+                  This is an automated receipt email. If you have any inquiries, contact ${SUPPORT_EMAIL}.
                 </p>
               </div>
             `
@@ -392,7 +399,7 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
               </tr>
               <tr style="border-bottom: 1px solid #eaeaea;">
                 <td style="padding: 8px 0; font-weight: bold; color: #767676;">Amount Paid</td>
-                <td style="padding: 8px 0; text-align: right;">INR ${dbPayment.amount}</td>
+                <td style="padding: 8px 0; text-align: right;">${dbPayment.currency === 'USD' ? '$' : 'INR '} ${dbPayment.amount}</td>
               </tr>
               ${dbPayment.address ? `
               <tr style="border-bottom: 1px solid #eaeaea;">
@@ -415,8 +422,8 @@ app.post('/payment-webhook', express.text({ type: 'application/json' }), async (
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'The Art Ledger Admin <noreply@infoartledger.com>',
-            to: ['theartledger00@gmail.com'],
+            from: FROM_EMAIL,
+            to: [ADMIN_EMAIL],
             subject: `New Order Alert: ${dbPayment.plan === 'single' ? 'Magazine Print' : dbPayment.plan === 'digital_single' ? 'Digital PDF' : 'Subscription'}`,
             html: adminHtml
           })
@@ -470,7 +477,8 @@ app.post('/newsletter-subscribe', express.json(), async (req, res) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'The Art Ledger <noreply@infoartledger.com>',
+            from: FROM_EMAIL,
+            reply_to: SUPPORT_EMAIL,
             to: [email],
             subject: 'Welcome to The Art Ledger',
             html: `
@@ -514,7 +522,7 @@ app.post('/forgot-password', express.json(), async (req, res) => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: 'http://localhost:5173/admin'
+        redirectTo: `${FRONTEND_URL}/admin`
       }
     });
 
@@ -536,7 +544,8 @@ app.post('/forgot-password', express.json(), async (req, res) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'The Art Ledger <noreply@infoartledger.com>',
+            from: FROM_EMAIL,
+            reply_to: SUPPORT_EMAIL,
             to: [email],
             subject: 'Password Recovery: The Art Ledger',
             html: `

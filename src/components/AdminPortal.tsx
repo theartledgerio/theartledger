@@ -9,7 +9,7 @@ import { supabase } from '../supabase';
 import { 
   Lock, Mail, Eye, EyeOff, LayoutDashboard, BookOpen, 
   Users, Layers, LogOut, Plus, Trash2, Edit3, X, Save, 
-  CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud
+  CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud, CreditCard, Calendar, MapPin, Images, Film
 } from 'lucide-react';
 import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
@@ -19,7 +19,93 @@ interface AdminPortalProps {
   portalRole: 'admin' | 'editor';
 }
 
-type TabType = 'dashboard' | 'blogs' | 'magazines' | 'artists';
+type TabType = 'dashboard' | 'hero' | 'blogs' | 'magazines' | 'artists' | 'payments' | 'events';
+
+// Drag and Drop File Upload Component for Admin Forms
+const DragDropFileZone: React.FC<{
+  label: string;
+  accept: string;
+  value: string;
+  onChange: (url: string) => void;
+  onFileSelect?: (file: File) => void;
+  placeholder?: string;
+  type?: 'image' | 'pdf';
+}> = ({ label, accept, value, onChange, onFileSelect, placeholder, type = 'image' }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => setIsDragging(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (onFileSelect) {
+        onFileSelect(file);
+      } else {
+        const url = URL.createObjectURL(file);
+        onChange(url);
+      }
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (onFileSelect) {
+        onFileSelect(file);
+      } else {
+        const url = URL.createObjectURL(file);
+        onChange(url);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">{label}</label>
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative border-2 border-dashed rounded-2xl p-4 text-center transition-all cursor-pointer ${
+          isDragging ? 'border-turquoise bg-turquoise/10 scale-[1.01]' : 'border-slate-200 bg-slate-50/50 hover:border-turquoise/50 hover:bg-slate-50'
+        }`}
+      >
+        <input
+          type="file"
+          accept={accept}
+          onChange={handleFileInput}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+        />
+        <div className="flex flex-col items-center justify-center gap-1.5">
+          <UploadCloud className={`w-6 h-6 ${isDragging ? 'text-turquoise animate-bounce' : 'text-slate-400'}`} />
+          <div className="text-xs">
+            <span className="font-bold text-midnight">Drag & drop file here</span> or <span className="text-turquoise font-semibold underline">browse file</span>
+          </div>
+          <p className="text-[9px] font-mono text-slate-400">Upload direct file or paste link below</p>
+        </div>
+      </div>
+      <div className="flex gap-3 items-center pt-1">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder || 'Or paste direct URL / Google Drive link...'}
+          className="flex-grow px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+        />
+        {type === 'image' && value && value.startsWith('http') && (
+          <img src={value} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-100" />
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function AdminPortal({ onChangePage, portalRole }: AdminPortalProps) {
   // Authentication states
@@ -46,11 +132,13 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [artistsList, setArtistsList] = useState<any[]>([]);
   const [subscribersList, setSubscribersList] = useState<any[]>([]);
   const [enquiriesList, setEnquiriesList] = useState<any[]>([]);
+  const [paymentsList, setPaymentsList] = useState<any[]>([]);
+  const [eventsList, setEventsList] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
   // CRUD Form Overlay states
   const [showFormModal, setShowFormModal] = useState(false);
-  const [formType, setFormType] = useState<'blog' | 'magazine' | 'artist'>('blog');
+  const [formType, setFormType] = useState<'blog' | 'magazine' | 'artist' | 'event' | 'hero'>('blog');
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -98,6 +186,28 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [artWorkUrl, setArtWorkUrl] = useState('');
   const [artStatement, setArtStatement] = useState('');
   const [artDisplayOrder, setArtDisplayOrder] = useState('0');
+
+  // 4. Event
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventSubtitle, setEventSubtitle] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [eventVenue, setEventVenue] = useState('');
+  const [eventArtist, setEventArtist] = useState('');
+  const [eventImage, setEventImage] = useState('');
+  const [eventType, setEventType] = useState('Exhibition');
+  const [eventDescription, setEventDescription] = useState('');
+  const [eventStatus, setEventStatus] = useState('Upcoming');
+
+  // 5. Hero Card State
+  const [heroList, setHeroList] = useState<any[]>([]);
+  const [heroBadge, setHeroBadge] = useState('');
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [heroMediaUrl, setHeroMediaUrl] = useState('');
+  const [heroMediaType, setHeroMediaType] = useState<'image' | 'video'>('image');
+  const [heroLinkPage, setHeroLinkPage] = useState('blogs');
+  const [heroLinkText, setHeroLinkText] = useState('Explore');
 
   // Toast / Feedback
   const [successToast, setSuccessToast] = useState('');
@@ -187,6 +297,33 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           .select('*')
           .order('display_order', { ascending: true });
         setArtistsList(data || []);
+      }
+      if (activeTab === 'payments' || activeTab === 'dashboard') {
+        const { data: payData } = await supabase
+          .from('payments')
+          .select('*')
+          .order('created_at', { ascending: false });
+        setPaymentsList(payData || []);
+      }
+      if (activeTab === 'events' || activeTab === 'dashboard') {
+        const { data: evData } = await supabase
+          .from('events')
+          .select('*')
+          .order('event_date', { ascending: false });
+        setEventsList(evData || []);
+      }
+      if (activeTab === 'hero' || activeTab === 'dashboard') {
+        const localSaved = localStorage.getItem('tal_hero_cards');
+        if (localSaved) {
+          try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
+        } else {
+          setHeroList([
+            { id: 'card-1', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200', badge: 'ESSAY // CONTEMPORARY', title: 'In Conversation with Prajakta Potnis', subtitle: 'Exploring contemporary sculpture and post-colonial motifs.', link_page: 'blogs', link_text: 'Read Full Essay' },
+            { id: 'card-2', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200', badge: 'EXHIBITION REVIEW', title: 'The Many Worlds of India\'s Tribal Art', subtitle: 'A curatorial deep-dive into indigenous craftsmanship.', link_page: 'events', link_text: 'View Exhibition' },
+            { id: 'card-3', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200', badge: 'LATEST ISSUE // NO. 42', title: 'The Digital Renaissance', subtitle: 'Special quarterly print release.', link_page: 'magazine', link_text: 'Explore Issue' },
+            { id: 'card-4', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=1200', badge: 'FEATURED ARTIST', title: 'Lorem ipsum dolor sit amet', subtitle: 'Monolithic forms in modern fine art commentary.', link_page: 'artists', link_text: 'Browse Roster' }
+          ]);
+        }
       }
       if (activeTab === 'dashboard') {
         const { data: subs } = await supabase
@@ -281,7 +418,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   };
 
   // Open Form modal
-  const openForm = (type: 'blog' | 'magazine' | 'artist', mode: 'create' | 'edit', item?: any) => {
+  const openForm = (type: 'blog' | 'magazine' | 'artist' | 'event' | 'hero', mode: 'create' | 'edit', item?: any) => {
     setFormType(type);
     setFormMode(mode);
     setEditingId(item ? item.id : null);
@@ -341,6 +478,25 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setArtWorkUrl(item ? item.featured_work_url || '' : '');
       setArtStatement(item ? item.statement || '' : '');
       setArtDisplayOrder(item ? item.display_order.toString() : '0');
+    } else if (type === 'event') {
+      setEventTitle(item ? item.title : '');
+      setEventSubtitle(item ? item.short_description || item.subtitle || '' : '');
+      setEventDate(item ? item.event_date || item.date || '' : '');
+      setEventTime(item ? item.time || '12:00 PM - 7:00 PM' : '');
+      setEventVenue(item ? item.location || item.venue || '' : '');
+      setEventArtist(item ? item.artist || '' : '');
+      setEventImage(item ? item.featured_image_url || item.image || '' : '');
+      setEventType(item ? item.type || 'Exhibition' : 'Exhibition');
+      setEventDescription(item ? item.long_description || item.description || '' : '');
+      setEventStatus(item ? item.status || 'Upcoming' : 'Upcoming');
+    } else if (type === 'hero') {
+      setHeroBadge(item ? item.badge || '' : 'FEATURED EDITORIAL');
+      setHeroTitle(item ? item.title || '' : '');
+      setHeroSubtitle(item ? item.subtitle || '' : '');
+      setHeroMediaUrl(item ? item.media_url || '' : '');
+      setHeroMediaType(item ? item.media_type || 'image' : 'image');
+      setHeroLinkPage(item ? item.link_page || 'blogs' : 'blogs');
+      setHeroLinkText(item ? item.link_text || 'Explore' : 'Explore');
     }
 
     setShowFormModal(true);
@@ -380,8 +536,8 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     }
   };
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePdfUpload = async (fileOrEvent: File | React.ChangeEvent<HTMLInputElement>) => {
+    const file = 'target' in fileOrEvent ? fileOrEvent.target.files?.[0] : fileOrEvent;
     if (!file) return;
 
     try {
@@ -434,10 +590,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           triggerToast('Blog post updated successfully!');
         }
       } else if (formType === 'magazine') {
-        const payload = {
-          issue_number: parseInt(magIssueNumber),
-          issue_name: magIssueName,
-          slug: magSlug || magIssueName.toLowerCase().replace(/ /g, '-'),
+        const payload: any = {
+          issue_number: parseInt(magIssueNumber) || 1,
+          issue_name: magIssueName || 'Untitled Issue',
+          slug: magSlug || (magIssueName ? magIssueName.toLowerCase().replace(/ /g, '-') : `issue-${Date.now()}`),
           release_date: magReleaseDate || new Date().toISOString().split('T')[0],
           single_issue_price: parseFloat(magPrice) || 0.0,
           single_issue_price_usd: parseFloat(magPriceUsd) || 0.0,
@@ -451,12 +607,44 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         };
 
         if (formMode === 'create') {
-          const { error } = await supabase.from('magazines').insert([payload]);
-          if (error) throw error;
+          let { error } = await supabase.from('magazines').insert([payload]);
+          if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+            const fallbackPayload = {
+              issue_number: payload.issue_number,
+              issue_name: payload.issue_name,
+              slug: payload.slug,
+              release_date: payload.release_date,
+              single_issue_price: payload.single_issue_price,
+              digital_pdf_price: payload.digital_pdf_price,
+              pdf_url: payload.pdf_url,
+              cover_image_url: payload.cover_image_url,
+              status: payload.status
+            };
+            const { error: fbErr } = await supabase.from('magazines').insert([fallbackPayload]);
+            if (fbErr) throw fbErr;
+          } else if (error) {
+            throw error;
+          }
           triggerToast('Magazine edition added successfully!');
         } else {
-          const { error } = await supabase.from('magazines').update(payload).eq('id', editingId);
-          if (error) throw error;
+          let { error } = await supabase.from('magazines').update(payload).eq('id', editingId);
+          if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+            const fallbackPayload = {
+              issue_number: payload.issue_number,
+              issue_name: payload.issue_name,
+              slug: payload.slug,
+              release_date: payload.release_date,
+              single_issue_price: payload.single_issue_price,
+              digital_pdf_price: payload.digital_pdf_price,
+              pdf_url: payload.pdf_url,
+              cover_image_url: payload.cover_image_url,
+              status: payload.status
+            };
+            const { error: fbErr } = await supabase.from('magazines').update(fallbackPayload).eq('id', editingId);
+            if (fbErr) throw fbErr;
+          } else if (error) {
+            throw error;
+          }
           triggerToast('Magazine edition updated successfully!');
         }
       } else if (formType === 'artist') {
@@ -485,6 +673,52 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           if (error) throw error;
           triggerToast('Artist profile updated successfully!');
         }
+      } else if (formType === 'event') {
+        const payload = {
+          title: eventTitle,
+          short_description: eventSubtitle,
+          long_description: eventDescription,
+          event_date: eventDate || new Date().toISOString().split('T')[0],
+          location: eventVenue,
+          featured_image_url: eventImage,
+          status: eventStatus.toLowerCase() === 'completed' ? 'completed' : eventStatus.toLowerCase() === 'draft' ? 'draft' : 'published',
+          slug: eventTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`
+        };
+
+        if (formMode === 'create') {
+          const { error } = await supabase.from('events').insert([payload]);
+          if (error) throw error;
+          triggerToast('Event created successfully!');
+        } else {
+          const { error } = await supabase.from('events').update(payload).eq('id', editingId);
+          if (error) throw error;
+          triggerToast('Event updated successfully!');
+        }
+      } else if (formType === 'hero') {
+        const cardObj = {
+          id: editingId || `card-${Date.now()}`,
+          badge: heroBadge || 'FEATURED STATEMENT',
+          title: heroTitle || 'Untitled Card',
+          subtitle: heroSubtitle || '',
+          media_url: heroMediaUrl || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
+          media_type: heroMediaType || 'image',
+          link_page: heroLinkPage || 'blogs',
+          link_text: heroLinkText || 'Explore'
+        };
+
+        let updated = [...heroList];
+        if (formMode === 'create') {
+          updated.push(cardObj);
+        } else {
+          updated = updated.map(c => c.id === editingId ? cardObj : c);
+        }
+
+        setHeroList(updated);
+        localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
+        try {
+          await supabase.from('site_settings').upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
+        } catch (e) {}
+        triggerToast('Hero Deck card saved successfully!');
       }
 
       setShowFormModal(false);
@@ -497,13 +731,25 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   };
 
   // Delete Item Action
-  const handleDelete = async (type: 'blog' | 'magazine' | 'artist', id: string) => {
+  const handleDelete = async (type: 'blog' | 'magazine' | 'artist' | 'event' | 'hero', id: string) => {
     if (!window.confirm('Are you absolutely certain you want to permanently delete this registry entry?')) return;
     try {
+      if (type === 'hero') {
+        const updated = heroList.filter(c => c.id !== id);
+        setHeroList(updated);
+        localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
+        try {
+          await supabase.from('site_settings').upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
+        } catch (e) {}
+        triggerToast('Hero Deck card removed.');
+        return;
+      }
+
       let table = '';
       if (type === 'blog') table = 'blog_submissions';
       else if (type === 'magazine') table = 'magazines';
       else if (type === 'artist') table = 'featured_profiles';
+      else if (type === 'event') table = 'events';
 
       const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
@@ -734,15 +980,29 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               <span>Manage Blogs</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('magazines')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'magazines' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Magazines</span>
-            </button>
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('hero')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'hero' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <Images className="w-4 h-4" />
+                <span>Hero Deck</span>
+              </button>
+            )}
+
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('magazines')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'magazines' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Magazines</span>
+              </button>
+            )}
 
             {portalRole === 'admin' && (
               <button
@@ -753,6 +1013,30 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               >
                 <Users className="w-4 h-4" />
                 <span>Artists Registry</span>
+              </button>
+            )}
+
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'events' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Events</span>
+              </button>
+            )}
+
+            {portalRole === 'admin' && (
+              <button
+                onClick={() => setActiveTab('payments')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'payments' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
+                }`}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Payment Dashboard</span>
               </button>
             )}
           </nav>
@@ -1116,6 +1400,233 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           </div>
         )}
 
+        {activeTab === 'events' && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60">
+              <div>
+                <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">CURATORIAL EVENTS</span>
+                <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Manage Events</h1>
+              </div>
+              <button
+                onClick={() => openForm('event', 'create')}
+                className="px-4 py-2.5 bg-midnight hover:bg-[#0B2545] rounded-xl text-[10px] font-sans font-bold uppercase tracking-widest text-white cursor-pointer flex items-center gap-1.5 shadow-md shadow-midnight/10"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>CREATE EVENT</span>
+              </button>
+            </div>
+
+            {/* Events table */}
+            <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-200/60 bg-slate-50/50">
+                <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">Exhibitions & Events ({eventsList.length})</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
+                      <th className="p-4">Title</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4">Venue/Location</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dataLoading ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-slate-500 font-mono">Loading events...</td>
+                      </tr>
+                    ) : eventsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-slate-500 font-mono">No events recorded in database.</td>
+                      </tr>
+                    ) : (
+                      eventsList.map(ev => (
+                        <tr key={ev.id} className="hover:bg-slate-50/60">
+                          <td className="p-4 font-serif font-bold text-midnight max-w-sm truncate">{ev.title}</td>
+                          <td className="p-4 text-slate-600 font-mono">{ev.event_date || ev.date || 'TBD'}</td>
+                          <td className="p-4 text-slate-600 truncate max-w-xs">{ev.location || ev.venue || 'N/A'}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
+                              ev.status === 'completed' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              {ev.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              onClick={() => openForm('event', 'edit', ev)}
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 hover:text-midnight transition-colors cursor-pointer inline-flex"
+                              title="Edit Event"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete('event', ev.id)}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-600 transition-colors cursor-pointer inline-flex"
+                              title="Delete Event"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'payments' && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60">
+              <div>
+                <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">FINANCIAL LEDGER</span>
+                <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Payment Dashboard</h1>
+              </div>
+            </div>
+
+            {/* Payments table with full address details */}
+            <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-200/60 bg-slate-50/50 flex justify-between items-center">
+                <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">Transaction Records & Customer Details ({paymentsList.length})</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
+                      <th className="p-4">Customer Name</th>
+                      <th className="p-4">Contact Info</th>
+                      <th className="p-4">Plan / Issue</th>
+                      <th className="p-4">Amount</th>
+                      <th className="p-4">Full Address & Shipping Details</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dataLoading ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">Loading payment records...</td>
+                      </tr>
+                    ) : paymentsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">No payment transactions recorded yet.</td>
+                      </tr>
+                    ) : (
+                      paymentsList.map(pay => (
+                        <tr key={pay.id} className="hover:bg-slate-50/60">
+                          <td className="p-4 font-serif font-bold text-midnight font-bold">{pay.name || 'Anonymous'}</td>
+                          <td className="p-4 space-y-0.5">
+                            <p className="font-mono text-[11px] text-slate-700">{pay.email}</p>
+                            <p className="font-mono text-[10px] text-slate-500">{pay.phone}</p>
+                          </td>
+                          <td className="p-4 font-mono text-[10px] uppercase text-[#0B2545] font-bold">
+                            {pay.plan} {pay.selected_issue ? `(${pay.selected_issue})` : ''}
+                          </td>
+                          <td className="p-4 font-mono font-bold text-emerald-700">
+                            {pay.currency === 'USD' ? `$${pay.amount}` : `₹${pay.amount}`}
+                          </td>
+                          <td className="p-4 text-slate-600 max-w-xs space-y-0.5">
+                            <p className="font-medium text-midnight truncate">{pay.address || 'N/A'}</p>
+                            <p className="text-[10px] font-mono text-slate-500">
+                              {[pay.city, pay.pincode, pay.country].filter(Boolean).join(', ')}
+                            </p>
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
+                              pay.status === 'captured' || pay.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {pay.status}
+                            </span>
+                          </td>
+                          <td className="p-4 font-mono text-[10px] text-slate-500">
+                            {pay.created_at ? new Date(pay.created_at).toLocaleDateString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'hero' && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60">
+              <div>
+                <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">INTERACTIVE SHUFFLE DECK</span>
+                <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Hero Deck Cards</h1>
+              </div>
+              <button
+                onClick={() => openForm('hero', 'create')}
+                className="flex items-center gap-2 px-5 py-3 bg-midnight hover:bg-deepblue text-white text-xs font-sans font-bold uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Hero Card</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {heroList.map((card, idx) => (
+                <div key={card.id || idx} className="bg-white border border-[#EAE5D8] rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="flex gap-4">
+                    <div className="w-24 h-32 rounded-xl overflow-hidden bg-slate-900 shrink-0 relative border border-slate-200">
+                      {card.media_type === 'video' ? (
+                        <video src={card.media_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={card.media_url} alt={card.title} className="w-full h-full object-cover" />
+                      )}
+                      <span className="absolute top-1 right-1 px-1.5 py-0.5 bg-black/70 text-[8px] font-mono text-turquoise rounded font-bold uppercase">
+                        {card.media_type}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <span className="text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase block truncate">
+                        {card.badge || 'FEATURED'}
+                      </span>
+                      <h3 className="text-base font-serif font-bold text-midnight line-clamp-2 leading-snug">
+                        {card.title}
+                      </h3>
+                      {card.subtitle && (
+                        <p className="text-xs text-slate-500 line-clamp-2 font-sans">
+                          {card.subtitle}
+                        </p>
+                      )}
+                      <p className="text-[10px] font-mono text-slate-400">
+                        Links to: <span className="text-midnight font-bold uppercase">{card.link_page}</span> ({card.link_text || 'Explore'})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => openForm('hero', 'edit', card)}
+                      className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-midnight text-[10px] font-mono font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete('hero', card.id)}
+                      className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-mono font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* Form Dialog Modal Overlay */}
@@ -1283,13 +1794,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                 )}
 
                 {formType === 'magazine' && (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Issue #</label>
                         <input
                           type="number"
-                          required
                           value={magIssueNumber}
                           onChange={(e) => setMagIssueNumber(e.target.value)}
                           placeholder="43"
@@ -1297,49 +1807,11 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Price (₹)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          required
-                          value={magPrice}
-                          onChange={(e) => setMagPrice(e.target.value)}
-                          placeholder="499.00"
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1">
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Release Date</label>
                         <input
                           type="date"
-                          required
                           value={magReleaseDate}
                           onChange={(e) => setMagReleaseDate(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Issue Title/Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={magIssueName}
-                        onChange={(e) => setMagIssueName(e.target.value)}
-                        placeholder="The Digital Renaissance"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Slug</label>
-                        <input
-                          type="text"
-                          value={magSlug}
-                          onChange={(e) => setMagSlug(e.target.value)}
-                          placeholder="digital-renaissance"
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                         />
                       </div>
@@ -1358,50 +1830,129 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Cover Image URL</label>
-                      <div className="flex gap-4 items-center">
-                        <input
-                          type="text"
-                          required
-                          value={magCoverUrl}
-                          onChange={(e) => setMagCoverUrl(e.target.value)}
-                          placeholder="https://images.unsplash.com/photo-..."
-                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                        {magCoverUrl && magCoverUrl.startsWith('http') && (
-                          <img src={magCoverUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Digital PDF File</label>
-                      <div className="flex gap-4 items-center">
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          onChange={handlePdfUpload}
-                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                        {magPdfUrl && (
-                          <a href={magPdfUrl} target="_blank" rel="noreferrer" className="text-xs font-mono text-turquoise underline">Preview PDF</a>
-                        )}
-                      </div>
-                      <p className="text-[9px] text-slate-400 font-mono">Upload the PDF to Supabase Storage</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Digital PDF Price (₹)</label>
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Issue Title/Name</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        value={magDigitalPrice}
-                        onChange={(e) => setMagDigitalPrice(e.target.value)}
-                        placeholder="299.00"
+                        type="text"
+                        value={magIssueName}
+                        onChange={(e) => setMagIssueName(e.target.value)}
+                        placeholder="The Digital Renaissance"
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                       />
                     </div>
 
+                    {/* PHYSICAL COPY PRICES (INR & USD) */}
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                      <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block">
+                        1. Physical Print Copy Prices
+                      </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">India Domestic Price (₹ INR)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magPrice}
+                            onChange={(e) => setMagPrice(e.target.value)}
+                            placeholder="499.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">International Price ($ USD)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magPriceUsd}
+                            onChange={(e) => setMagPriceUsd(e.target.value)}
+                            placeholder="15.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ONLINE PRINT / DIGITAL PDF PRICES (INR & USD) */}
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                      <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block">
+                        2. Online Print / Digital Edition Prices
+                      </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Online Print Price (₹ INR)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magDigitalPrice}
+                            onChange={(e) => setMagDigitalPrice(e.target.value)}
+                            placeholder="299.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Online Print Price ($ USD)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magDigitalPriceUsd}
+                            onChange={(e) => setMagDigitalPriceUsd(e.target.value)}
+                            placeholder="10.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SHIPPING FEES (INR & USD) */}
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                      <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block">
+                        3. Shipping Fees (Domestic & International)
+                      </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">India Domestic Shipping (₹ INR)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magShippingInr}
+                            onChange={(e) => setMagShippingInr(e.target.value)}
+                            placeholder="150.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">International Shipping ($ USD)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={magShippingUsd}
+                            onChange={(e) => setMagShippingUsd(e.target.value)}
+                            placeholder="15.00"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DRAG & DROP COVER IMAGE ZONE */}
+                    <DragDropFileZone
+                      label="Cover Image (Drag & Drop or Select File)"
+                      accept="image/*"
+                      value={magCoverUrl}
+                      onChange={(url) => setMagCoverUrl(url)}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      type="image"
+                    />
+
+                    {/* DRAG & DROP ONLINE PRINT PDF FILE ZONE */}
+                    <DragDropFileZone
+                      label="Online Print PDF File (Drag & Drop or Select File)"
+                      accept="application/pdf"
+                      value={magPdfUrl}
+                      onChange={(url) => setMagPdfUrl(url)}
+                      onFileSelect={handlePdfUpload}
+                      placeholder="https://supabase.co/storage/v1/object/public/..."
+                      type="pdf"
+                    />
                   </div>
                 )}
 
@@ -1545,6 +2096,194 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         placeholder="Full bio narrative of the artist..."
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'event' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Event Title</label>
+                      <input
+                        type="text"
+                        value={eventTitle}
+                        onChange={(e) => setEventTitle(e.target.value)}
+                        placeholder="Freedom - Season 3"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Subtitle / Tagline</label>
+                        <input
+                          type="text"
+                          value={eventSubtitle}
+                          onChange={(e) => setEventSubtitle(e.target.value)}
+                          placeholder="International Art Exhibition & Award Event"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Status</label>
+                        <select
+                          value={eventStatus}
+                          onChange={(e) => setEventStatus(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        >
+                          <option value="Upcoming">Upcoming</option>
+                          <option value="Published">Published</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Draft">Draft</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Event Date</label>
+                        <input
+                          type="date"
+                          value={eventDate}
+                          onChange={(e) => setEventDate(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Event Time</label>
+                        <input
+                          type="text"
+                          value={eventTime}
+                          onChange={(e) => setEventTime(e.target.value)}
+                          placeholder="12:00 PM - 7:00 PM"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Venue / Location</label>
+                      <input
+                        type="text"
+                        value={eventVenue}
+                        onChange={(e) => setEventVenue(e.target.value)}
+                        placeholder="Nehru Centre AC Art Gallery, Worli, Mumbai"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Featured Image (Direct URL or Google Drive Link)</label>
+                      <div className="flex gap-4 items-center">
+                        <input
+                          type="text"
+                          value={eventImage}
+                          onChange={(e) => setEventImage(e.target.value)}
+                          placeholder="https://images.unsplash.com/photo-..."
+                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                        {eventImage && eventImage.startsWith('http') && (
+                          <img src={eventImage} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Detailed Overview & Description</label>
+                      <textarea
+                        rows={6}
+                        value={eventDescription}
+                        onChange={(e) => setEventDescription(e.target.value)}
+                        placeholder="Full exhibition narrative and rules..."
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'hero' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Badge Tag</label>
+                        <input
+                          type="text"
+                          value={heroBadge}
+                          onChange={(e) => setHeroBadge(e.target.value)}
+                          placeholder="FEATURED ESSAY // CONTEMPORARY"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Media Type</label>
+                        <select
+                          value={heroMediaType}
+                          onChange={(e) => setHeroMediaType(e.target.value as 'image' | 'video')}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        >
+                          <option value="image">Image (JPG / PNG / WebP)</option>
+                          <option value="video">Video (MP4 / WebM / Video Clip)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={heroTitle}
+                        onChange={(e) => setHeroTitle(e.target.value)}
+                        placeholder="In Conversation with..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Subtitle / Description</label>
+                      <textarea
+                        rows={3}
+                        value={heroSubtitle}
+                        onChange={(e) => setHeroSubtitle(e.target.value)}
+                        placeholder="Short summary overlay on hero card..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans"
+                      />
+                    </div>
+
+                    <DragDropFileZone
+                      label={heroMediaType === 'video' ? "Upload Video File or Paste Video URL" : "Upload Image File or Paste Image URL"}
+                      accept={heroMediaType === 'video' ? "video/*" : "image/*"}
+                      value={heroMediaUrl}
+                      onChange={(url) => setHeroMediaUrl(url)}
+                      placeholder={heroMediaType === 'video' ? "https://cdn.example.com/art-clip.mp4" : "https://images.unsplash.com/photo-..."}
+                      type="image"
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Target Page Link</label>
+                        <select
+                          value={heroLinkPage}
+                          onChange={(e) => setHeroLinkPage(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        >
+                          <option value="blogs">Journal / Blogs</option>
+                          <option value="events">Events & Exhibitions</option>
+                          <option value="magazine">Magazine Print Issues</option>
+                          <option value="artists">Featured Artists</option>
+                          <option value="about">About The Art Ledger</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Button Text</label>
+                        <input
+                          type="text"
+                          value={heroLinkText}
+                          onChange={(e) => setHeroLinkText(e.target.value)}
+                          placeholder="Read Essay"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

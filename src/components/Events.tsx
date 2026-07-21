@@ -43,7 +43,41 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           timelineStep: 1
         };
 
-        setEvents([freedomEvent]);
+        const DUMMY_TITLES = [
+          'the future of fine art asset valuation',
+          'beneath the canvas: elena rossi',
+          'beneath the canvas',
+          'the silent monument',
+          'monolithic echoes',
+          'curatorial symposium',
+          'digital resonances'
+        ];
+
+        const { data } = await supabase.from('events').select('*').order('event_date', { ascending: true });
+
+        const realEventsFromDb: Event[] = (data || [])
+          .filter(item => {
+            const titleLower = (item.title || '').toLowerCase();
+            return !DUMMY_TITLES.some(d => titleLower.includes(d));
+          })
+          .map((item, index) => ({
+            id: item.id,
+            title: item.title,
+            subtitle: item.short_description || 'Curated Exhibition',
+            date: item.event_date || '2026-08-11',
+            time: '12:00 PM - 7:00 PM',
+            venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
+            artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
+            image: item.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
+            status: item.status === 'completed' ? 'Completed' : item.status === 'published' ? 'Current' : 'Upcoming',
+            description: item.long_description || item.short_description || '',
+            type: 'Exhibition',
+            timelineStep: index + 1
+          }));
+
+        // Ensure Freedom 3 is the single sole exhibition event
+        const freedomOnly = [freedomEvent];
+        setEvents(freedomOnly);
         setActiveEvent(freedomEvent);
       } catch (err) {
         console.error('Error fetching events:', err);
@@ -577,24 +611,23 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                             </div>
 
                             <div className="bg-slate-50 border border-offwhite rounded-2xl p-6 space-y-4">
-                              <h4 className="font-serif font-bold text-midnight text-lg">Participation Fees</h4>
+                              <h4 className="font-serif font-bold text-midnight text-lg">Participation Details</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-graycustom leading-relaxed">
                                 <div className="space-y-2 p-4 bg-white border border-offwhite rounded-xl">
                                   <span className="font-mono text-[10px] text-midnight font-bold uppercase tracking-wider block">PHASE 1 (11–13 Aug 2026)</span>
-                                  <p className="text-base font-serif font-bold text-midnight mt-1">₹2,399 <span className="text-xs font-sans text-graycustom font-normal">/ 1 Artwork</span></p>
-                                  <p className="text-[10px] font-mono text-graycustom mt-1">Extra Artwork: ₹2,199 each</p>
+                                  <p className="text-sm font-serif font-bold text-midnight mt-1">Single & Multiple Submissions Available</p>
+                                  <p className="text-[10px] font-mono text-graycustom mt-1">Contact Advisory Desk for Slot Allocation</p>
                                 </div>
                                 <div className="space-y-2 p-4 bg-white border border-offwhite rounded-xl">
                                   <span className="font-mono text-[10px] text-midnight font-bold uppercase tracking-wider block">PHASE 2 (14–16 Aug 2026)</span>
-                                  <p className="text-base font-serif font-bold text-midnight mt-1">₹2,799 <span className="text-xs font-sans text-graycustom font-normal">/ 1 Artwork</span></p>
-                                  <p className="text-[10px] font-mono text-graycustom mt-1">Extra Artwork: ₹2,599 each</p>
+                                  <p className="text-sm font-serif font-bold text-midnight mt-1">Single & Multiple Submissions Available</p>
+                                  <p className="text-[10px] font-mono text-graycustom mt-1">Contact Advisory Desk for Slot Allocation</p>
                                 </div>
                                 <div className="md:col-span-2 space-y-2 pt-2 border-t border-offwhite">
                                   <span className="font-mono text-[10px] text-midnight font-bold uppercase block">Special Conditions</span>
                                   <ul className="list-disc pl-4 space-y-1">
-                                    <li><strong>Sculpture entry:</strong> 1 Sculpture has free entry if selected.</li>
-                                    <li><strong>Bulk discount:</strong> Flat 10% discount on total fees if participating in both phases (all 6 days).</li>
-                                    <li><strong>Loyalty discount:</strong> Additional ₹100 discount for previous SKAF curated physical exhibition participants.</li>
+                                    <li><strong>Sculpture entry:</strong> 1 Sculpture entry included upon selection.</li>
+                                    <li><strong>Multi-phase discount:</strong> Special incentives available for participating in both phases (all 6 days).</li>
                                     <li><strong>No commission:</strong> There is <span className="text-midnight font-bold font-serif underline font-bold">NO commission (0%)</span> charged on artwork sales. All proceeds go directly to the artist.</li>
                                   </ul>
                                 </div>
