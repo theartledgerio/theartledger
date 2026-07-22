@@ -10,8 +10,6 @@ export interface Artist {
   country: string;
   bio: string;
   portrait: string;
-  featuredWorkTitle: string;
-  featuredWorkUrl: string;
   born: string;
   medium: string;
   statement: string;

@@ -73,6 +73,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   const [shippingEmail, setShippingEmail] = useState(user?.email || '');
   const [shippingPhone, setShippingPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingHouseNo, setShippingHouseNo] = useState('');
   const [shippingCity, setShippingCity] = useState('');
   const [shippingPincode, setShippingPincode] = useState('');
   const [shippingCountry, setShippingCountry] = useState('India');
@@ -342,7 +343,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           name: shippingName,
           email: shippingEmail,
           phone: shippingPhone,
-          address: shippingAddress,
+          address: shippingHouseNo ? `${shippingHouseNo}, ${shippingAddress}`.trim() : shippingAddress,
           city: shippingCity,
           pincode: shippingPincode,
           country: currency === 'INR' ? 'India' : 'International',
@@ -722,7 +723,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       {/* FLIPBOOK PREVIEW MODAL - CLEAN FLOATING ARTWORK MODE */}
       <AnimatePresence>
         {previewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-8">
             {/* Soft Dark Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -778,7 +779,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               </div>
 
               {/* Floating Magazine Spread Center Stage */}
-              <div className="relative w-full flex-1 my-4 flex items-center justify-center pointer-events-auto overflow-hidden">
+              <div className="relative w-full flex-1 my-2 lg:my-4 flex items-center justify-center pointer-events-auto overflow-hidden">
                 
                 {/* Previous Page Floating Button */}
                 {currentPageIndex > 0 && (
@@ -791,7 +792,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 )}
 
                 {/* The Floating Magazine Spread Container */}
-                <div className="relative max-w-5xl max-h-[78vh] aspect-[3/2] flex items-center justify-center shadow-[0_30px_100px_rgba(0,0,0,0.9)] rounded-lg overflow-hidden border border-white/15">
+                <div className="relative w-full h-full lg:max-w-5xl lg:max-h-[78vh] lg:aspect-[3/2] flex items-center justify-center shadow-[0_30px_100px_rgba(0,0,0,0.9)] lg:rounded-lg overflow-hidden border border-white/15">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={`spread-${currentPageIndex}`}
@@ -999,18 +1000,33 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         </button>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
-                          Shipping Address
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Street address, apartment, suite"
-                          value={shippingAddress}
-                          onChange={(e) => setShippingAddress(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                            House / Flat / Suite No.
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Flat 402, 4th Floor"
+                            value={shippingHouseNo}
+                            onChange={(e) => setShippingHouseNo(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-graycustom uppercase tracking-widest mb-1.5 font-bold">
+                            Apartment / Building / Street
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Sea Breeze Apartments"
+                            value={shippingAddress}
+                            onChange={(e) => setShippingAddress(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs outline-none text-midnight font-semibold shadow-sm"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -1110,7 +1126,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     </button>
                     <button
                       type="submit"
-                      disabled={isPending || !shippingName || !shippingEmail || !shippingPhone || (purchasePlan !== 'digital_single' && (!shippingAddress || !shippingCity || !shippingPincode))}
+                      disabled={isPending || !shippingName || !shippingEmail || !shippingPhone || (purchasePlan !== 'digital_single' && (!shippingHouseNo || !shippingAddress || !shippingCity || !shippingPincode))}
                       className="flex-1 py-3 bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all duration-200 shadow-lg cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
                       {isPending ? (

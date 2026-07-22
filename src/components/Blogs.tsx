@@ -31,7 +31,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
 
         if (error) throw error;
 
-        const filtered = (data || []).filter(item => item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e');
+        const filtered = data || [];
         
         const extractFirstImage = (htmlContent: string) => {
           const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);

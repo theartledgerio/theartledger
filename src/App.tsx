@@ -93,7 +93,7 @@ export default function App() {
       {currentPage === 'admin' ? (
         <AdminPortal onChangePage={handlePageChange} portalRole={portalRole} />
       ) : (
-        <main className="flex-grow pt-12">
+        <main className="flex-grow pt-[70px] lg:pt-[84px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}

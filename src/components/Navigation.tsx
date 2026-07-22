@@ -65,11 +65,7 @@ export default function Navigation({
 
       <nav
         id="main-nav"
-        className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 ${
-          scrolled 
-            ? 'py-3 bg-white/70 border-b border-slate-200/50 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)]' 
-            : 'py-6 bg-transparent border-b border-transparent'
-        }`}
+        className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 py-3 bg-white/95 border-b border-slate-200/60 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.02)]`}
       >
         <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
           
@@ -102,12 +98,12 @@ export default function Navigation({
                 <button
                   key={item.id}
                   onClick={() => onChangePage(item.id)}
-                  className={`text-sm font-sans font-bold uppercase tracking-widest transition-all duration-300 relative group py-1 cursor-pointer ${
-                    isActive ? 'text-turquoise' : 'text-darknavy/75 hover:text-turquoise'
+                  className={`text-xl font-condensed tracking-widest transition-all duration-300 relative group py-1 cursor-pointer ${
+                    isActive ? 'text-darknavy' : 'text-darknavy hover:text-darknavy/80'
                   }`}
                 >
                   {item.name}
-                  <span className={`absolute bottom-0 left-0 h-[1.5px] bg-turquoise transition-all duration-300 ${
+                  <span className={`absolute bottom-0 left-0 h-[1.5px] bg-darknavy transition-all duration-300 ${
                     isActive ? 'w-full' : 'w-0 group-hover:w-full'
                   }`} />
                 </button>
@@ -195,8 +191,8 @@ export default function Navigation({
                         setIsOpen(false);
                         onChangePage(item.id);
                       }}
-                      className={`text-left text-sm font-bold uppercase tracking-wider py-2 border-b border-gray-100 cursor-pointer ${
-                        isActive ? 'text-turquoise' : 'text-darknavy'
+                      className={`text-left text-lg font-condensed tracking-wider py-2 border-b border-gray-100 cursor-pointer ${
+                        isActive ? 'text-darknavy font-bold' : 'text-darknavy/80'
                       }`}
                     >
                       {item.name}

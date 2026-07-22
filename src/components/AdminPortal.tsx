@@ -178,12 +178,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [artName, setArtName] = useState('');
   const [artShortBio, setArtShortBio] = useState('');
   const [artImageUrl, setArtImageUrl] = useState('');
-  const [artStyle, setArtStyle] = useState('Painting');
+  const [artStyle, setArtStyle] = useState('Artist');
   const [artCountry, setArtCountry] = useState('');
   const [artBorn, setArtBorn] = useState('');
   const [artMedium, setArtMedium] = useState('');
-  const [artWorkTitle, setArtWorkTitle] = useState('');
-  const [artWorkUrl, setArtWorkUrl] = useState('');
   const [artStatement, setArtStatement] = useState('');
   const [artDisplayOrder, setArtDisplayOrder] = useState('0');
 
@@ -470,12 +468,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setArtName(item ? item.name : '');
       setArtShortBio(item ? item.short_bio || '' : '');
       setArtImageUrl(item ? item.image_url || '' : '');
-      setArtStyle(item ? item.style || 'Painting' : 'Painting');
+      setArtStyle(item ? item.style || 'Artist' : 'Artist');
       setArtCountry(item ? item.country || '' : '');
       setArtBorn(item ? item.born || '' : '');
       setArtMedium(item ? item.medium || '' : '');
-      setArtWorkTitle(item ? item.featured_work_title || '' : '');
-      setArtWorkUrl(item ? item.featured_work_url || '' : '');
       setArtStatement(item ? item.statement || '' : '');
       setArtDisplayOrder(item ? item.display_order.toString() : '0');
     } else if (type === 'event') {
@@ -656,8 +652,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           country: artCountry,
           born: artBorn,
           medium: artMedium,
-          featured_work_title: artWorkTitle,
-          featured_work_url: artWorkUrl || artImageUrl,
           statement: artStatement,
           display_order: parseInt(artDisplayOrder) || 0,
           is_published: true,
@@ -1370,7 +1364,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       artistsList.map(art => (
                         <tr key={art.id} className="hover:bg-slate-50/60">
                           <td className="p-4 font-serif font-bold text-midnight font-bold max-w-sm truncate">{art.name}</td>
-                          <td className="p-4 text-slate-600 font-mono text-[10px] uppercase">{art.style || 'Painting'}</td>
+                          <td className="p-4 text-slate-600 font-mono text-[10px] uppercase">{art.style || 'Artist'}</td>
                           <td className="p-4 text-slate-600">{art.country || 'Global'}</td>
                           <td className="p-4 text-slate-600 font-mono">{art.born || '1990'}</td>
                           <td className="p-4 text-right font-mono text-[#0B2545] font-bold">{art.display_order}</td>
@@ -1977,10 +1971,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           onChange={(e) => setArtStyle(e.target.value)}
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                         >
-                          <option value="Painting">Painting</option>
-                          <option value="Sculpture">Sculpture</option>
-                          <option value="Photography">Photography</option>
-                          <option value="Digital">Digital</option>
+                          <option value="Artist">Artist</option>
+                          <option value="Collector">Collector</option>
+                          <option value="Advisor">Advisor</option>
                         </select>
                       </div>
                     </div>
@@ -2050,29 +2043,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Featured Work Title</label>
-                        <input
-                          type="text"
-                          required
-                          value={artWorkTitle}
-                          onChange={(e) => setArtWorkTitle(e.target.value)}
-                          placeholder="Ethereal Shifting"
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Featured Work Image URL</label>
-                        <input
-                          type="text"
-                          value={artWorkUrl}
-                          onChange={(e) => setArtWorkUrl(e.target.value)}
-                          placeholder="Leave blank to use Portrait Image"
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                      </div>
-                    </div>
+
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Artist Statement</label>

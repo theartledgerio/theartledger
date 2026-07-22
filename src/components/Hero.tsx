@@ -185,7 +185,7 @@ export default function Hero({ onChangePage }: HeroProps) {
 
         {/* Left Column: Editorial Manifesto & Statement */}
         <div className="order-1 lg:col-span-6 flex flex-col justify-center text-left">
-          <div className="-mt-24 sm:-mt-28 mb-24 sm:mb-28">
+          <div className="mt-6 lg:-mt-28 mb-16 lg:mb-28">
             <motion.h1
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}

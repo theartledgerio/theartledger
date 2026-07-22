@@ -41,13 +41,11 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
           return {
             id: p.id,
             name: p.name,
-            style: p.style || 'Painting',
+            style: p.style || 'Artist',
             country: p.country || 'Global',
             born: p.born || '1990',
             medium: p.medium || 'Various Media',
             portrait: p.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=600&h=750',
-            featuredWorkTitle: p.featured_work_title || 'Curated Selection',
-            featuredWorkUrl: p.featured_work_url || p.image_url || 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800',
             bio: p.short_bio || `Renowned practitioner showcasing their unique curatorial language in The Art Ledger registry.`,
             statement: p.statement || 'Art is the permanent ledger of human sensory and structural evolution.'
           };
@@ -220,7 +218,7 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
           <div className="grid grid-cols-1 md:grid-cols-12 max-h-[85vh] overflow-y-auto no-scrollbar">
             
             {/* Left Side: Images */}
-            <div className="md:col-span-5 bg-white p-6 flex flex-col justify-between border-r border-[#EAE5D8]">
+            <div className="md:col-span-5 bg-white p-6 flex flex-col justify-start border-r border-[#EAE5D8]">
               <div className="space-y-6">
                 <div>
                   <span className="text-[10px] font-mono text-turquoise font-bold uppercase tracking-widest block mb-2">
@@ -230,20 +228,6 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                     <img
                       src={selectedArtist.portrait}
                       alt={selectedArtist.name}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-2">
-                    SIGNATURE PIECE: {selectedArtist.featuredWorkTitle}
-                  </span>
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-sm border border-[#EAE5D8]">
-                    <img
-                      src={selectedArtist.featuredWorkUrl}
-                      alt={selectedArtist.featuredWorkTitle}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
