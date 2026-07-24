@@ -32,6 +32,7 @@ const DragDropFileZone: React.FC<{
   type?: 'image' | 'pdf';
 }> = ({ label, accept, value, onChange, onFileSelect, placeholder, type = 'image' }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -40,29 +41,43 @@ const DragDropFileZone: React.FC<{
 
   const handleDragLeave = () => setIsDragging(false);
 
+  const processFile = async (file: File) => {
+    if (onFileSelect) {
+      onFileSelect(file);
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const bucketName = type === 'pdf' ? 'magazine_pdfs' : 'public_images';
+      
+      const { error } = await supabase.storage.from(bucketName).upload(fileName, file);
+      if (error) throw error;
+      
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+      onChange(data.publicUrl);
+    } catch (e: any) {
+      alert(`Upload failed: ${e.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      if (onFileSelect) {
-        onFileSelect(file);
-      } else {
-        const url = URL.createObjectURL(file);
-        onChange(url);
-      }
+      processFile(file);
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (onFileSelect) {
-        onFileSelect(file);
-      } else {
-        const url = URL.createObjectURL(file);
-        onChange(url);
-      }
+      processFile(file);
     }
   };
 
@@ -81,12 +96,21 @@ const DragDropFileZone: React.FC<{
           type="file"
           accept={accept}
           onChange={handleFileInput}
+          disabled={isUploading}
           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
         />
         <div className="flex flex-col items-center justify-center gap-1.5">
-          <UploadCloud className={`w-6 h-6 ${isDragging ? 'text-turquoise animate-bounce' : 'text-slate-400'}`} />
+          {isUploading ? (
+            <div className="w-6 h-6 border-2 border-turquoise border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <UploadCloud className={`w-6 h-6 ${isDragging ? 'text-turquoise animate-bounce' : 'text-slate-400'}`} />
+          )}
           <div className="text-xs">
-            <span className="font-bold text-midnight">Drag & drop file here</span> or <span className="text-turquoise font-semibold underline">browse file</span>
+            {isUploading ? (
+              <span className="font-bold text-turquoise">Uploading...</span>
+            ) : (
+              <><span className="font-bold text-midnight">Drag & drop file here</span> or <span className="text-turquoise font-semibold underline">browse file</span></>
+            )}
           </div>
           <p className="text-[9px] font-mono text-slate-400">Upload direct file or paste link below</p>
         </div>
