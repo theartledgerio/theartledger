@@ -1,7 +1,9 @@
 // Deno Edge Function: payment-create
 // Path: backend/supabase/functions/payment-create/index.ts
 
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -9,37 +11,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
     const supabaseClient = createClient(
+      // @ts-ignore
       Deno.env.get("SUPABASE_URL") ?? "",
+      // @ts-ignore
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
+      authHeader ? {
         global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
+          headers: { Authorization: authHeader },
         },
-      }
+      } : {}
     );
 
-    // Get authorized user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized access" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let user = null;
+    if (authHeader) {
+      const { data, error } = await supabaseClient.auth.getUser();
+      if (!error && data?.user) {
+        user = data.user;
+      }
     }
 
     const { 
-      plan, 
+      plan: rawPlan, 
       selected_issue, 
       name, 
       email, 
@@ -48,17 +48,21 @@ serve(async (req) => {
       city, 
       pincode, 
       country, 
-      quantity = 1 
+      quantity = 1,
+      currency = "INR"
     } = await req.json();
+
+    const plan = rawPlan === '1_year' ? 'annual' : rawPlan;
 
     let amount = 0;
     let desc = "";
+    let isDigital = false;
 
     // 1. Determine price based on plan or selected issue
-    if (plan === "single" && selected_issue) {
+    if ((plan === "single" || plan === "digital_single") && selected_issue) {
       const { data: magazine, error: dbError } = await supabaseClient
         .from("magazines")
-        .select("single_issue_price, issue_name")
+        .select("single_issue_price, single_issue_price_usd, digital_pdf_price, digital_pdf_price_usd, issue_name")
         .eq("id", selected_issue)
         .single();
 
@@ -68,28 +72,31 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      amount = Number(magazine.single_issue_price) * quantity;
-      desc = `TAL Issue Purchase: ${magazine.issue_name}`;
+      if (plan === "digital_single") {
+        amount = currency === 'USD' 
+          ? (Number(magazine.digital_pdf_price_usd) || 10) * quantity
+          : (Number(magazine.digital_pdf_price) || 299) * quantity;
+        desc = `TAL Digital PDF Purchase: ${magazine.issue_name}`;
+        isDigital = true;
+      } else {
+        amount = currency === 'USD'
+          ? (Number(magazine.single_issue_price_usd) || 30) * quantity
+          : (Number(magazine.single_issue_price) || 2500) * quantity;
+        desc = `TAL Issue Purchase: ${magazine.issue_name}`;
+      }
     } else if (plan === "quarterly" || plan === "annual") {
-      const { data: settings, error: dbError } = await supabaseClient
+      const { data: settings } = await supabaseClient
         .from("subscription_settings")
         .select("quarterly_price, annual_price")
         .eq("is_active", true)
         .limit(1)
         .maybeSingle();
 
-      if (dbError || !settings) {
-        return new Response(JSON.stringify({ error: "Subscription settings not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       if (plan === "quarterly") {
-        amount = Number(settings.quarterly_price);
+        amount = settings ? Number(settings.quarterly_price) : (currency === 'USD' ? 100 : 7500);
         desc = "TAL Subscription: Quarterly Membership";
       } else {
-        amount = Number(settings.annual_price);
+        amount = settings ? Number(settings.annual_price) : (currency === 'USD' ? 400 : 30000);
         desc = "TAL Subscription: Annual VIP Membership";
       }
     } else {
@@ -101,7 +108,7 @@ serve(async (req) => {
 
     // Include shipping fee if applicable (e.g. print plan)
     let shippingFee = 0;
-    if (plan === "single" || plan === "quarterly" || plan === "annual") {
+    if (!isDigital && (plan === "single" || plan === "quarterly" || plan === "annual")) {
       const { data: shipping } = await supabaseClient
         .from("shipping_settings")
         .select("india_fee, international_fee, india_free_threshold")
@@ -109,15 +116,18 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
+      const isIndia = (country || "India").toLowerCase().includes("india");
+      
       if (shipping) {
-        const isIndia = (country || "India").toLowerCase().includes("india");
         const threshold = Number(shipping.india_free_threshold);
-        
         if (isIndia) {
           shippingFee = amount >= threshold ? 0 : Number(shipping.india_fee);
         } else {
           shippingFee = Number(shipping.international_fee);
         }
+      } else {
+        // Fallback shipping fees
+        shippingFee = isIndia ? 150 : 15;
       }
     }
 
@@ -125,7 +135,9 @@ serve(async (req) => {
     const amountInSubunits = Math.round(totalAmount * 100); // Razorpay amount in cents/paise
 
     // 2. Call Razorpay API to generate order
+    // @ts-ignore
     const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
+    // @ts-ignore
     const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
     const authString = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
@@ -137,14 +149,14 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         amount: amountInSubunits,
-        currency: "INR",
+        currency: currency === 'USD' ? 'USD' : 'INR',
         receipt: `receipt_tal_${Date.now()}`,
         notes: {
-          userId: user.id,
+          userId: user?.id || "",
           plan: plan,
           selectedIssue: selected_issue || "",
-          name: name,
-          email: email
+          name: name || "",
+          email: email || ""
         },
       }),
     });
@@ -163,8 +175,8 @@ serve(async (req) => {
     const { error: insertError } = await supabaseClient
       .from("payments")
       .insert({
-        name: name || user.raw_user_meta_data?.full_name || "Collector",
-        email: email || user.email || "",
+        name: name || user?.raw_user_meta_data?.full_name || "Collector",
+        email: email || user?.email || "",
         phone: phone || "",
         plan: plan,
         amount: totalAmount,
@@ -194,7 +206,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
