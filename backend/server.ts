@@ -13,7 +13,7 @@ const port = process.env.PORT || 3003;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'The Art Ledger <noreply@infoartledger.com>';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'theartledger00@gmail.com';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'curations@infoartledger.com';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://13.232.65.37:3004';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.theartledger.io';
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 
