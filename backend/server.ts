@@ -25,6 +25,8 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.warn('Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not defined in environment variables.');
 }
 
+(globalThis as any).WebSocket = WebSocket;
+
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     autoRefreshToken: false,

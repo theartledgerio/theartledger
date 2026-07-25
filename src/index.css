@@ -11,9 +11,9 @@
   --color-darknavy: #000000;
   --color-graycustom: #737373;
 
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-sans: "Inter", "Poppins", sans-serif;
-  --font-condensed: "Bebas Neue", sans-serif;
+  --font-serif: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-sans: "Cormorant Garamond", "Inter", "Poppins", sans-serif;
+  --font-condensed: "Cormorant Garamond", "Bebas Neue", sans-serif;
   
   --animate-float: float 6s ease-in-out infinite;
   --animate-marquee: marquee 30s linear infinite;
