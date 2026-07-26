@@ -1,19 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600;1,700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Bebas+Neue&family=League+Gothic&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-midnight: #1A1A1A;
-  --color-deepblue: #2D2D2D;
-  --color-turquoise: #444444;
-  --color-gold: #767676;
-  --color-offwhite: #EBEBEB;
-  --color-warmwhite: #F6F6F6;
-  --color-darknavy: #000000;
-  --color-graycustom: #737373;
+  --color-midnight: #111827;
+  --color-deepblue: #1F2937;
+  --color-turquoise: #0F766E;
+  --color-gold: #B45309;
+  --color-offwhite: #F8FAFC;
+  --color-warmwhite: #FAF9F5;
+  --color-darknavy: #030712;
+  --color-graycustom: #64748B;
 
-  --font-serif: "League Gothic", "Bebas Neue", sans-serif;
-  --font-sans: "League Gothic", "Bebas Neue", sans-serif;
+  --font-serif: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-condensed: "League Gothic", "Bebas Neue", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
   
   --animate-float: float 6s ease-in-out infinite;
   --animate-marquee: marquee 30s linear infinite;

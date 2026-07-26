@@ -8,6 +8,23 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Download, CreditCard, ChevronLeft, ChevronRight, X, Sparkles, CheckCircle2, Sun, Moon, Share2, MapPin, Locate, Loader2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useCurrency } from '../CurrencyContext';
+import { API_BASE_URL } from '../config';
+
+const loadRazorpay = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 
 interface MagazineEdition {
   id: string;
@@ -332,7 +349,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
     try {
       // Create payment order on the backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-create`, {
+      const response = await fetch(`${API_BASE_URL}/payment-create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -353,10 +370,16 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       });
 
       if (!response.ok) {
-        throw new Error('Payment order creation failed');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.details || `Payment order creation failed (status ${response.status})`);
       }
 
       const orderData = await response.json();
+
+      const razorpayLoaded = await loadRazorpay();
+      if (!razorpayLoaded || typeof (window as any).Razorpay === 'undefined') {
+        throw new Error('Razorpay SDK failed to load. Please check your network connection.');
+      }
 
       // Open Razorpay Popup
       const options = {
@@ -372,7 +395,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           setIsPurchased(true);
           setIsPending(false);
 
-          await fetch(`${import.meta.env.VITE_API_URL}/payment-webhook`, {
+          await fetch(`${API_BASE_URL}/payment-webhook`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

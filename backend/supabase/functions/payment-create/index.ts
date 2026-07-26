@@ -62,7 +62,7 @@ serve(async (req: Request) => {
     if ((plan === "single" || plan === "digital_single") && selected_issue) {
       const { data: magazine, error: dbError } = await supabaseClient
         .from("magazines")
-        .select("single_issue_price, single_issue_price_usd, digital_pdf_price, digital_pdf_price_usd, issue_name")
+        .select("single_issue_price, digital_pdf_price, issue_name")
         .eq("id", selected_issue)
         .single();
 
@@ -73,18 +73,20 @@ serve(async (req: Request) => {
         });
       }
       if (plan === "digital_single") {
+        const baseInr = Number(magazine.digital_pdf_price) || 299;
         amount = currency === 'USD' 
-          ? (Number(magazine.digital_pdf_price_usd) || 10) * quantity
-          : (Number(magazine.digital_pdf_price) || 299) * quantity;
+          ? (Math.round(baseInr / 80) || 10) * quantity
+          : baseInr * quantity;
         desc = `TAL Digital PDF Purchase: ${magazine.issue_name}`;
         isDigital = true;
       } else {
+        const baseInr = Number(magazine.single_issue_price) || 499;
         amount = currency === 'USD'
-          ? (Number(magazine.single_issue_price_usd) || 30) * quantity
-          : (Number(magazine.single_issue_price) || 2500) * quantity;
+          ? (Math.round(baseInr / 80) || 30) * quantity
+          : baseInr * quantity;
         desc = `TAL Issue Purchase: ${magazine.issue_name}`;
       }
-    } else if (plan === "quarterly" || plan === "annual") {
+    } else if (plan === "quarterly" || plan === "annual" || plan === "1_year") {
       const { data: settings } = await supabaseClient
         .from("subscription_settings")
         .select("quarterly_price, annual_price")

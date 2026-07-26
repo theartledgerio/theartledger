@@ -19,7 +19,7 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api': {
-          target: 'http://13.232.65.37:3003',
+          target: process.env.VITE_BACKEND_TARGET || 'http://localhost:3003',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
         }

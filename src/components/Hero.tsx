@@ -72,7 +72,11 @@ export default function Hero({ onChangePage }: HeroProps) {
           .eq('status', 'approved')
           .order('published_at', { ascending: false });
 
-        const prajaktaBlog = (allBlogs || []).find(b => b.title?.toLowerCase().includes('prajakta')) || (allBlogs && allBlogs[0]);
+        const validBlogs = (allBlogs || []).filter(b => 
+          !b.title?.toLowerCase().includes('father-daughter') && 
+          !b.title?.toLowerCase().includes('fake history')
+        );
+        const prajaktaBlog = validBlogs.find(b => b.title?.toLowerCase().includes('prajakta')) || validBlogs[0];
         
         const extractFirstImage = (htmlContent: string) => {
           const match = (htmlContent || '').match(/<img[^>]+src="([^">]+)"/);
@@ -303,11 +307,6 @@ export default function Hero({ onChangePage }: HeroProps) {
                         transition={{ duration: 0.35, ease: 'easeOut' }}
                         className="absolute inset-x-0 bottom-0 p-7 text-white flex flex-col justify-end z-30"
                       >
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-turquoise/20 border border-turquoise/40 backdrop-blur-md text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase mb-3 rounded-full w-fit shadow-sm animate-pulse">
-                          <Sparkles className="w-3 h-3" />
-                          {card.badge || 'INTERCONNECTED CONTENT'}
-                        </span>
-                        
                         <h3 className="text-xl md:text-2xl font-serif font-extrabold leading-tight text-white mb-2 line-clamp-2 drop-shadow-md">
                           {card.title}
                         </h3>
@@ -375,9 +374,6 @@ export default function Hero({ onChangePage }: HeroProps) {
                   />
                 )}
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-5 text-white">
-                  <span className="text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase mb-1.5 block">
-                    {card.badge}
-                  </span>
                   <h3 className="text-base font-sans font-bold leading-tight text-white mb-1.5 line-clamp-2">
                     {card.title}
                   </h3>

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export default function Newsletter() {
     setErrorMessage('');
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/newsletter-subscribe`, {
+      const res = await fetch(`${API_BASE_URL}/newsletter-subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

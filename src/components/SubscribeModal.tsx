@@ -3,125 +3,147 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, CreditCard, Sparkles, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { useCurrency } from '../CurrencyContext';
+import { API_BASE_URL } from '../config';
+
+const loadRazorpay = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 interface SubscribeModalProps {
- isOpen: boolean;
- onClose: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps) {
- const { formatPrice, currency, addressData } = useCurrency();
- const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
- const [isSubmitted, setIsSubmitted] = useState(false);
- const [isPending, setIsPending] = useState(false);
- const [memberId, setMemberId] = useState('');
- 
- // Checkout states
- const [email, setEmail] = useState('');
- const [name, setName] = useState('');
- const [address, setAddress] = useState('');
- const [city, setCity] = useState('');
- const [pincode, setPincode] = useState('');
- const [country, setCountry] = useState('India');
+  const { formatPrice, currency, addressData } = useCurrency();
+  const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [memberId, setMemberId] = useState('');
+  
+  // Checkout states
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [country, setCountry] = useState('India');
 
- React.useEffect(() => {
-   if (addressData) {
-     if (addressData.city) setCity(addressData.city);
-     if (addressData.country) setCountry(addressData.country);
-     if (addressData.postcode) setPincode(addressData.postcode);
-     if (addressData.state) setAddress(addressData.state);
-   }
- }, [addressData]);
+  React.useEffect(() => {
+    if (addressData) {
+      if (addressData.city) setCity(addressData.city);
+      if (addressData.country) setCountry(addressData.country);
+      if (addressData.postcode) setPincode(addressData.postcode);
+      if (addressData.state) setAddress(addressData.state);
+    }
+  }, [addressData]);
 
- const plans = [
- {
- id: '1_year' as const,
- name: '1 Year Subscription',
- priceInINR: 30000,
- period: 'subscription',
- desc: 'Our premium offering. Receive curated print publications delivered directly to your doorstep for an entire year.',
- perks: ['All Printed Journal Issues', 'Full Digital Ledger Access', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
- featured: true
- }
- ];
+  const plans = [
+    {
+      id: '1_year' as const,
+      name: '1 Year Subscription',
+      priceInINR: 30000,
+      period: 'subscription',
+      desc: 'Our premium offering. Receive curated print publications delivered directly to your doorstep for an entire year.',
+      perks: ['All Printed Journal Issues', 'Full Digital Ledger Access', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
+      featured: true
+    }
+  ];
 
- const handleSubscribe = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!name || !email) return;
- setIsPending(true);
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email) return;
+    setIsPending(true);
 
- try {
- const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-create`, {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json'
- },
- body: JSON.stringify({
- plan: selectedPlan,
- name,
- email,
- address,
- city,
- pincode,
- country,
- currency
- })
- });
+    try {
+      const response = await fetch(`${API_BASE_URL}/payment-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          name,
+          email,
+          address,
+          city,
+          pincode,
+          country,
+          currency
+        })
+      });
 
- if (!response.ok) {
- throw new Error('Subscription initiation failed');
- }
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.details || `Subscription initiation failed (status ${response.status})`);
+      }
 
- const orderData = await response.json();
+      const orderData = await response.json();
 
- const options = {
- key: orderData.key_id || 'rzp_test_placeholder',
- amount: orderData.amount,
- currency: orderData.currency,
- name: 'The Art Ledger',
- description: orderData.description,
- order_id: orderData.order_id,
- handler: async function (response: any) {
- setMemberId(`TAL-2026-${Math.floor(1000 + Math.random() * 9000)}`);
- setIsSubmitted(true);
- setIsPending(false);
+      const razorpayLoaded = await loadRazorpay();
+      if (!razorpayLoaded || typeof (window as any).Razorpay === 'undefined') {
+        throw new Error('Razorpay SDK failed to load. Please check your network connection.');
+      }
 
- await fetch(`${import.meta.env.VITE_API_URL}/payment-webhook`, {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- 'x-razorpay-signature': response.razorpay_signature || ''
- },
- body: JSON.stringify({
- event: 'payment.captured',
- payload: {
- payment: {
- entity: {
- id: response.razorpay_payment_id,
- order_id: response.razorpay_order_id,
- amount: orderData.amount
- }
- }
- }
- })
- }).catch(err => console.error('Subscription webhook post failed:', err));
- },
- prefill: {
- name,
- email
- },
- theme: {
- color: '#1A1A1A'
- }
- };
+      const options = {
+        key: orderData.key_id || 'rzp_test_placeholder',
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'The Art Ledger',
+        description: orderData.description,
+        order_id: orderData.order_id,
+        handler: async function (response: any) {
+          setMemberId(`TAL-2026-${Math.floor(1000 + Math.random() * 9000)}`);
+          setIsSubmitted(true);
+          setIsPending(false);
 
- const rzp = new (window as any).Razorpay(options);
- rzp.open();
- } catch (err: any) {
- alert(`Subscription failed: ${err.message}`);
- setIsPending(false);
- }
- };
+          await fetch(`${API_BASE_URL}/payment-webhook`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-razorpay-signature': response.razorpay_signature || ''
+            },
+            body: JSON.stringify({
+              event: 'payment.captured',
+              payload: {
+                payment: {
+                  entity: {
+                    id: response.razorpay_payment_id,
+                    order_id: response.razorpay_order_id,
+                    amount: orderData.amount
+                  }
+                }
+              }
+            })
+          }).catch(err => console.error('Subscription webhook post failed:', err));
+        },
+        prefill: {
+          name,
+          email
+        },
+        theme: {
+          color: '#1A1A1A'
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      alert(`Subscription failed: ${err.message}`);
+      setIsPending(false);
+    }
+  };
 
  return (
  <AnimatePresence>

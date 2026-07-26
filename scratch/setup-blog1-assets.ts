@@ -1,25 +1,40 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+dotenv.config();
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { BookOpen, User, Clock, ArrowRight } from 'lucide-react';
-import { Blog } from '../types';
-import { supabase } from '../supabase';
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
-interface BlogsProps {
-  searchQuery: string;
-  isHome?: boolean;
-  onChangePage?: (pageId: string) => void;
-  onSelectBlog?: (blog: Blog) => void;
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6">A little over a year ago, the New York City art dealer Robert Rogal received a visit to his private showroom from a young woman, who seemed eager to offload a family heirloom.</p>
+async function run() {
+  const srcDir = path.join('public', "blog`1");
+  const destDir = path.join('public', "blog1");
+
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+
+  const files = ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png', '9.png'];
+
+  for (const f of files) {
+    const srcFile = path.join(srcDir, f);
+    const destFile = path.join(destDir, f);
+    if (fs.existsSync(srcFile)) {
+      fs.copyFileSync(srcFile, destFile);
+      console.log(`Copied ${srcFile} -> ${destFile}`);
+    }
+  }
+
+  // Define image URLs using Supabase Storage
+  const img = (num: number) => `https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/father_daughter_${num}.png`;
+
+  const html = `<p class="lead text-lg font-serif italic mb-6">A little over a year ago, the New York City art dealer Robert Rogal received a visit to his private showroom from a young woman, who seemed eager to offload a family heirloom.</p>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/1.png" alt="Raimonds Staprans - Triple Boats" class="w-full h-auto object-cover max-h-[550px]" />
+  <img src="${img(1)}" alt="Raimonds Staprans - Triple Boats" class="w-full h-auto object-cover max-h-[550px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Imaged by Heritage Auctions, HA.com</p>
 </div>
 
@@ -34,7 +49,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <h2 class="text-2xl font-serif font-bold text-midnight mt-10 mb-4">The Art market and provenance through the most expensive modern painting ever sold in the auction:</h2>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/2.png" alt="Portrait of Elisabeth Lederer by Gustav Klimt" class="w-full h-auto object-cover max-h-[650px]" />
+  <img src="${img(2)}" alt="Portrait of Elisabeth Lederer by Gustav Klimt" class="w-full h-auto object-cover max-h-[650px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Gustav Klimt, Portrait of Elisabeth Lederer (1914–1916). Standing over six feet tall, the canvas showcases Klimt's late, ornamental style.</p>
 </div>
 
@@ -43,7 +58,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <p class="mb-4">Elisabeth is swaddled in a billowing, diaphanous dress, nestled within a textured and ornamental pyramid, an implied Imperial dragon robe. The upper half of her torso is ensconced in an arc of stylised Chinese figures. The effect reminds me of a halo in an icon (religious images painted on wooden panels).</p>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/3.png" alt="Elisabeth's mother Szerena in her apartment in Vienna with the portrait" class="w-full h-auto object-cover max-h-[500px]" />
+  <img src="${img(3)}" alt="Elisabeth's mother Szerena in her apartment in Vienna with the portrait" class="w-full h-auto object-cover max-h-[500px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Elisabeth’s mother Szerena in her apartment in Vienna with the portrait. Wiki Commons</p>
 </div>
 
@@ -62,7 +77,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <p class="mb-4">Aided by her former brother-in-law, a high-ranking Nazi official, Elisabeth was legally reclassified as illegitimate and “half-Aryan”. This lie successfully shielded her from the death camps, uniting art history, gossip and survival in a single legal document.</p>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/4.png" alt="Klimt in 1914" class="w-full h-auto object-cover max-h-[500px]" />
+  <img src="${img(4)}" alt="Klimt in 1914" class="w-full h-auto object-cover max-h-[500px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Klimt in 1914, the same year he began the portrait of Elisabeth. Wiki Commons</p>
 </div>
 
@@ -154,7 +169,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <p class="mb-4">The real motive of this idea is that the magic doesn’t reside in the art but the way one looks at it, that describes or reflects either the culture or Individual.</p>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/5.png" alt="Arnold Böcklin - Self-Portrait with Death Playing the Fiddle" class="w-full h-auto object-cover max-h-[550px]" />
+  <img src="${img(5)}" alt="Arnold Böcklin - Self-Portrait with Death Playing the Fiddle" class="w-full h-auto object-cover max-h-[550px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Arnold Böcklin, Self-Portrait with Death Playing the Fiddle (1872).</p>
 </div>
 
@@ -175,7 +190,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <h2 class="text-2xl font-serif font-bold text-midnight mt-10 mb-4">The Triumph of the object:</h2>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/6.png" alt="Octagonal Renaissance/Devotional Masterpiece" class="w-full h-auto object-cover max-h-[550px]" />
+  <img src="${img(6)}" alt="Octagonal Renaissance/Devotional Masterpiece" class="w-full h-auto object-cover max-h-[550px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">The supremacy of the object: Baudrillard's metaphysical scenario of divine objectification.</p>
 </div>
 
@@ -191,11 +206,11 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
   <div class="rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md bg-white">
-    <img src="/blog1/7.png" alt="Descartes Model: Subject to Object" class="w-full h-auto object-contain max-h-[300px] p-4" />
+    <img src="${img(7)}" alt="Descartes Model: Subject to Object" class="w-full h-auto object-contain max-h-[300px] p-4" />
     <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider text-center">Descartes' Model: Subject &rarr; Object</p>
   </div>
   <div class="rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md bg-white">
-    <img src="/blog1/8.png" alt="Baudrillard Model: Object to Subject" class="w-full h-auto object-contain max-h-[300px] p-4" />
+    <img src="${img(8)}" alt="Baudrillard Model: Object to Subject" class="w-full h-auto object-contain max-h-[300px] p-4" />
     <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider text-center">Baudrillard's Model: Object &rarr; Subject</p>
   </div>
 </div>
@@ -209,7 +224,7 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 <p class="mb-4">This is how society becomes object oriented rather than the subject.</p>
 
 <div class="my-8 rounded-[24px] overflow-hidden border border-offwhite/50 shadow-md">
-  <img src="/blog1/9.png" alt="Distorted faces surreal collage" class="w-full h-auto object-cover max-h-[550px]" />
+  <img src="${img(9)}" alt="Distorted faces surreal collage" class="w-full h-auto object-cover max-h-[550px]" />
   <p class="text-[10px] font-mono text-graycustom px-6 py-3 bg-offwhite/30 border-t border-offwhite/30 uppercase tracking-wider">Visualizing hyperreality: the distorted reflection of collective identity.</p>
 </div>
 
@@ -223,309 +238,25 @@ const FATHER_DAUGHTER_BLOG_HTML = `<p class="lead text-lg font-serif italic mb-6
 
 <p class="mb-4">Perhaps that is what a painting ultimately asks of us. No belief in its documentation. Not different from its price. Just enough stillness to feel whether something is alive in it or not. That stillness is not naïve — it is the oldest form of verification there is.</p>`;
 
-export default function Blogs({ searchQuery, isHome = false, onChangePage, onSelectBlog }: BlogsProps) {
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const primaryId = 'fa2b09d9-56f9-4e99-bbdb-3aafaf88ebf3';
+  const { error: upErr } = await supabase
+    .from('blog_submissions')
+    .update({
+      title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
+      content: html,
+      short_description: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
+      image_url: img(1),
+      name: 'Editorial Board',
+      category: 'Art Market & Philosophy',
+      status: 'approved'
+    })
+    .eq('id', primaryId);
 
-  useEffect(() => {
-    async function loadBlogs() {
-      try {
-        const { data, error } = await supabase
-          .from('blog_submissions')
-          .select('*')
-          .eq('status', 'approved')
-          .order('published_at', { ascending: false });
-
-        if (error) throw error;
-
-        const filtered = data || [];
-        
-        const extractFirstImage = (htmlContent: string) => {
-          const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);
-          return match ? match[1] : null;
-        };
-
-        const mapped: Blog[] = filtered.map((item, index) => {
-          const isFatherDaughter = item.title?.toLowerCase().includes('father-daughter') || item.title?.toLowerCase().includes('fake history');
-
-          if (isFatherDaughter) {
-            return {
-              id: item.id,
-              title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
-              excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
-              content: FATHER_DAUGHTER_BLOG_HTML,
-              image: '/blog1/1.png',
-              readingTime: '12 min read',
-              author: item.name || 'Editorial Board',
-              category: 'Art Market & Philosophy',
-              date: item.published_at 
-                ? new Date(item.published_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })
-                : 'Mar 15, 2026',
-              featured: false
-            };
-          }
-
-          const wordCount = item.content ? item.content.split(/\s+/).length : 0;
-          const readMin = Math.max(1, Math.ceil(wordCount / 200));
-          const firstImage = extractFirstImage(item.content || '');
-          
-          return {
-            id: item.id,
-            title: item.title,
-            excerpt: item.short_description || '',
-            content: item.content || '',
-            image: firstImage || item.image_url || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
-            readingTime: `${readMin} min read`,
-            author: item.name || 'Editorial Board',
-            category: item.category || 'Contemporary',
-            date: item.published_at 
-              ? new Date(item.published_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })
-              : 'Recent',
-            featured: index === 0
-          };
-        });
-
-        const uniqueBlogs = mapped.filter((blog, index, self) =>
-          index === self.findIndex(b => b.title.toLowerCase().trim() === blog.title.toLowerCase().trim())
-        );
-
-        const sorted = [...uniqueBlogs].sort((a, b) => {
-          if (a.title.toLowerCase().includes('prajakta')) return -1;
-          if (b.title.toLowerCase().includes('prajakta')) return 1;
-          return 0;
-        });
-
-        if (sorted.length > 0) {
-          sorted.forEach((b, i) => {
-            b.featured = (i === 0);
-          });
-        }
-
-        setBlogs(sorted);
-      } catch (err) {
-        console.error('Error fetching blogs from database:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadBlogs();
-  }, []);
-
-  // Filter blogs based on global search query
-  const filteredBlogs = blogs.filter(blog => {
-    return (
-      blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
-  // Separate featured blog from standard blogs
-  const featuredBlog = filteredBlogs.find(b => b.featured) || filteredBlogs[0];
-  const secondaryBlogs = filteredBlogs.filter(b => b.id !== (featuredBlog?.id || ''));
-
-  return (
-    <section
-      id="blogs"
-      className="py-16 md:py-24 bg-offwhite"
-    >
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
-        
-        {/* Improved Section Header - Elegant Editorial Design */}
-        <div className="border-b border-slate-200/60 pb-8 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <span className="text-[10px] font-mono tracking-[0.25em] text-turquoise font-bold uppercase block mb-2">
-              THE LEDGER DIGEST
-            </span>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-midnight tracking-tight leading-tight">
-              Editorial Journal
-            </h2>
-          </div>
-          <p className="text-xs md:text-sm text-graycustom font-sans max-w-md md:text-right leading-relaxed">
-            Critical evaluations, artist dialogues, and market research examining contemporary movements and cultural infrastructure.
-          </p>
-        </div>
-
-        {isHome ? (
-          // HOME LAYOUT: Render ONLY the single latest / featured blog with image on left and text on right
-          featuredBlog ? (
-            <div className="max-w-5xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-                onClick={() => onSelectBlog?.(featuredBlog)}
-                className="group relative rounded-[32px] overflow-hidden bg-warmwhite border-[0.5px] border-[#EAE5D8]/30 hover:border-turquoise/30 shadow-xl hover:shadow-2xl transition-all duration-500 grid grid-cols-1 md:grid-cols-12 items-stretch cursor-pointer"
-              >
-                {/* Left Column: Photo cover (Image on Left) */}
-                <div className="md:col-span-5 overflow-hidden relative min-h-[320px] md:min-h-[460px]">
-                  <img
-                    src={featuredBlog.image}
-                    alt={featuredBlog.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
-                    referrerPolicy="no-referrer"
-                  />
-                  {/* Subtle paper luster overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-midnight/10 via-transparent to-white/10 pointer-events-none mix-blend-overlay" />
-                </div>
-
-                {/* Right Column: Body details (Text on Right) */}
-                <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-between">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3 text-[10px] font-mono text-turquoise font-bold uppercase">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" />
-                        {featuredBlog.author}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-graycustom font-medium">
-                        <Clock className="w-3.5 h-3.5" />
-                        {featuredBlog.readingTime}
-                      </span>
-                      <span>•</span>
-                      <span className="text-graycustom font-medium">{featuredBlog.date}</span>
-                    </div>
-
-                    <h3 className="text-2xl sm:text-3xl font-serif font-bold text-midnight tracking-tight leading-tight group-hover:text-turquoise transition-colors duration-300">
-                      {featuredBlog.title}
-                    </h3>
-
-                    <p className="text-xs md:text-sm text-graycustom leading-relaxed font-medium">
-                      {featuredBlog.excerpt}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 mt-8 border-t border-offwhite/85 w-full">
-                    <button
-                      id={`read-featured-blog-btn-${featuredBlog.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectBlog?.(featuredBlog);
-                      }}
-                      className="group flex items-center space-x-2 text-xs font-sans font-bold uppercase tracking-widest text-midnight hover:text-turquoise transition-colors duration-200 cursor-pointer"
-                    >
-                      <span>Read Full Essay</span>
-                      <motion.span
-                        animate={{ x: [0, 4, 0] }}
-                        transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                      >
-                        <ArrowRight className="w-4 h-4 text-turquoise" />
-                      </motion.span>
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onChangePage?.('blogs');
-                      }}
-                      className="px-6 py-3 rounded-xl bg-midnight hover:bg-turquoise text-white text-[9px] font-sans font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer shadow-md hover:shadow-turquoise/15"
-                    >
-                      EXPLORE FULL JOURNAL ({blogs.length})
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-graycustom font-sans text-sm">No editorial essays available.</p>
-            </div>
-          )
-        ) : (
-          // DEDICATED ARCHIVE PAGE LAYOUT (Single-column stacked horizontal cards matching Home page style)
-          filteredBlogs.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-gray-200 rounded-3xl max-w-5xl mx-auto">
-              <p className="text-graycustom font-sans text-sm">No editorial articles match your search criteria.</p>
-            </div>
-          ) : (
-            <div className="max-w-5xl mx-auto space-y-10">
-              {filteredBlogs.map((blog) => (
-                <motion.div
-                  key={blog.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
-                  onClick={() => onSelectBlog?.(blog)}
-                  className="group relative rounded-[32px] overflow-hidden bg-warmwhite border-[0.5px] border-[#EAE5D8]/30 hover:border-turquoise/30 shadow-xl hover:shadow-2xl transition-all duration-500 grid grid-cols-1 md:grid-cols-12 items-stretch cursor-pointer"
-                >
-                  {/* Left Column: Photo cover (Image on Left) */}
-                  <div className="md:col-span-5 overflow-hidden relative min-h-[300px] md:min-h-[380px]">
-                    <img
-                      src={blog.image}
-                      alt={blog.title}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
-                      referrerPolicy="no-referrer"
-                    />
-                    {/* Subtle paper luster overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-midnight/10 via-transparent to-white/10 pointer-events-none mix-blend-overlay" />
-                  </div>
-
-                  {/* Right Column: Body details (Text on Right) */}
-                  <div className="md:col-span-7 p-7 md:p-10 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-[10px] font-mono text-turquoise font-bold uppercase">
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5" />
-                          {blog.author}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 text-graycustom font-medium">
-                          <Clock className="w-3.5 h-3.5" />
-                          {blog.readingTime}
-                        </span>
-                        <span>•</span>
-                        <span className="text-graycustom font-medium">{blog.date}</span>
-                      </div>
-
-                      <h3 className="text-2xl sm:text-3xl font-serif font-bold text-midnight tracking-tight leading-tight group-hover:text-turquoise transition-colors duration-300">
-                        {blog.title}
-                      </h3>
-
-                      <p className="text-xs md:text-sm text-graycustom leading-relaxed font-medium line-clamp-3">
-                        {blog.excerpt}
-                      </p>
-                    </div>
-
-                    <div className="pt-6 mt-6 border-t border-offwhite/85 flex items-center justify-between">
-                      <button
-                        id={`read-blog-btn-${blog.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectBlog?.(blog);
-                        }}
-                        className="group flex items-center space-x-2 text-xs font-sans font-bold uppercase tracking-widest text-midnight hover:text-turquoise transition-colors duration-200 cursor-pointer"
-                      >
-                        <span>Read Full Essay</span>
-                        <motion.span
-                          animate={{ x: [0, 4, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                        >
-                          <ArrowRight className="w-4 h-4 text-turquoise" />
-                        </motion.span>
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )
-      )}
-
-      </div>
-
-    </section>
-  );
+  if (upErr) {
+    console.error('Update failed:', upErr);
+  } else {
+    console.log('Successfully updated blog in database with 1-9 images!');
+  }
 }
+
+run().catch(console.error);

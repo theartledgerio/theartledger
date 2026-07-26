@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 async function testPayment() {
-  const url = 'http://localhost:3003/payment-create';
+  const url = process.env.API_URL || 'http://13.232.65.37:3003/payment-create';
   
   const payload = {
     plan: '1_year',

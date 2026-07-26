@@ -91,19 +91,19 @@ export default function Navigation({
           </button>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-10">
             {navItems.map((item) => {
               const isActive = activePage === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onChangePage(item.id)}
-                  className={`text-xl font-condensed tracking-widest transition-all duration-300 relative group py-1 cursor-pointer ${
-                    isActive ? 'text-darknavy' : 'text-darknavy hover:text-darknavy/80'
+                  className={`text-xs md:text-sm font-sans font-black tracking-[0.2em] uppercase transition-all duration-300 relative group py-2 cursor-pointer ${
+                    isActive ? 'text-black font-extrabold' : 'text-black/75 hover:text-black'
                   }`}
                 >
                   {item.name}
-                  <span className={`absolute bottom-0 left-0 h-[1.5px] bg-darknavy transition-all duration-300 ${
+                  <span className={`absolute bottom-0 left-0 h-[2.5px] bg-black transition-all duration-300 ${
                     isActive ? 'w-full' : 'w-0 group-hover:w-full'
                   }`} />
                 </button>
@@ -117,21 +117,21 @@ export default function Navigation({
             <button
               id="subscribe-nav-btn"
               onClick={onOpenSubscribeModal}
-              className="px-5 py-2.5 rounded-full text-sm font-sans font-semibold uppercase tracking-widest text-white bg-midnight hover:bg-turquoise hover:text-white shadow-md hover:shadow-turquoise/20 transition-all duration-300 transform active:scale-95 cursor-pointer"
+              className="px-7 py-2.5 rounded-full text-xs font-sans font-bold uppercase tracking-[0.2em] text-white bg-black hover:bg-slate-800 hover:text-white shadow-md hover:shadow-black/20 transition-all duration-300 transform active:scale-95 cursor-pointer"
             >
               Subscribe
             </button>
 
             {/* User Sign In / Profile Action */}
             {user ? (
-              <div className="flex items-center gap-3 bg-midnight/5 px-4 py-2 rounded-full border border-offwhite">
-                <User className="w-4 h-4 text-midnight" />
-                <span className="text-[10px] font-mono font-bold uppercase text-midnight max-w-[100px] truncate">
+              <div className="flex items-center gap-3 bg-black/5 px-4 py-2 rounded-full border border-black/20">
+                <User className="w-4 h-4 text-black" />
+                <span className="text-[11px] font-mono font-bold uppercase text-black max-w-[120px] truncate">
                   {user.email.split('@')[0]}
                 </span>
                 <button
                   onClick={onSignOut}
-                  className="p-1 text-red-500 hover:text-red-700 rounded-full hover:bg-red-50 cursor-pointer"
+                  className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -140,7 +140,7 @@ export default function Navigation({
             ) : (
               <button
                 onClick={onSignInClick}
-                className="px-4 py-2 border border-midnight text-midnight hover:bg-midnight hover:text-white font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer"
+                className="px-6 py-2 border-2 border-black text-black hover:bg-black hover:text-white font-sans text-xs font-bold uppercase tracking-[0.2em] rounded-full transition-all cursor-pointer"
               >
                 Sign In
               </button>
@@ -153,7 +153,7 @@ export default function Navigation({
             <button
               id="mobile-subscribe-nav-btn"
               onClick={onOpenSubscribeModal}
-              className="px-4 py-2 rounded-full text-[10px] sm:text-xs font-sans font-semibold uppercase tracking-widest text-white bg-midnight hover:bg-turquoise shadow-md transition-all duration-300 transform active:scale-95 cursor-pointer"
+              className="px-4 py-2 rounded-full text-xs font-sans font-bold uppercase tracking-widest text-white bg-black hover:bg-slate-800 shadow-md transition-all duration-300 transform active:scale-95 cursor-pointer"
             >
               Subscribe
             </button>
@@ -162,10 +162,10 @@ export default function Navigation({
             <button
               id="mobile-menu-btn"
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-darknavy cursor-pointer"
+              className="p-2 text-black cursor-pointer"
               aria-label="Toggle menu"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isOpen ? <X className="w-6 h-6 text-black" /> : <Menu className="w-6 h-6 text-black" />}
             </button>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function Navigation({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
-              className="lg:hidden w-full bg-white/95 border-b border-slate-200/50 backdrop-blur-xl mt-2 shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
+              className="lg:hidden w-full bg-white/98 border-b border-slate-200/80 backdrop-blur-xl mt-2 shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
             >
               <div className="flex flex-col px-6 py-6 space-y-4">
                 {navItems.map((item) => {
@@ -191,8 +191,8 @@ export default function Navigation({
                         setIsOpen(false);
                         onChangePage(item.id);
                       }}
-                      className={`text-left text-lg font-condensed tracking-wider py-2 border-b border-gray-100 cursor-pointer ${
-                        isActive ? 'text-darknavy font-bold' : 'text-darknavy/80'
+                      className={`text-left text-sm font-sans font-extrabold tracking-[0.2em] uppercase py-3 border-b border-slate-100 cursor-pointer ${
+                        isActive ? 'text-black font-black' : 'text-black/80'
                       }`}
                     >
                       {item.name}

@@ -37,9 +37,21 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   }
 });
 
-// Basic health check
-app.get('/', (req, res) => {
-  res.json({ message: 'The Art Ledger Backend API is running on port 3003.' });
+// Route: delete-target-blog
+app.post('/delete-target-blog', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('blog_submissions')
+      .delete()
+      .ilike('title', '%father%');
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(200).json({ message: 'Blog deleted successfully', data });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Route: payment-create
@@ -93,31 +105,34 @@ app.post('/payment-create', express.json(), async (req, res) => {
     if ((plan === 'single' || plan === 'digital_single') && selected_issue) {
       const { data: magazine, error: dbError } = await supabaseAdmin
         .from('magazines')
-        .select('single_issue_price, single_issue_price_usd, digital_pdf_price, digital_pdf_price_usd, shipping_inr, shipping_usd, issue_name')
+        .select('single_issue_price, digital_pdf_price, issue_name')
         .eq('id', selected_issue)
         .single();
 
       if (dbError || !magazine) {
+        console.error('Magazine query error:', dbError);
         return res.status(404).json({ error: 'Magazine issue not found' });
       }
       
       if (plan === 'digital_single') {
+        const baseInr = Number(magazine.digital_pdf_price) || 299;
         amount = currency === 'USD' 
-          ? (magazine.digital_pdf_price_usd || 10) * quantity
-          : (magazine.digital_pdf_price || 299) * quantity;
+          ? Math.round(baseInr / 80) || 10
+          : baseInr;
+        amount *= quantity;
         desc = `TAL Digital PDF Purchase: ${magazine.issue_name}`;
         isDigital = true;
       } else {
+        const baseInr = Number(magazine.single_issue_price) || 499;
         amount = currency === 'USD'
-          ? (magazine.single_issue_price_usd || 30) * quantity
-          : (magazine.single_issue_price || 2500) * quantity;
+          ? Math.round(baseInr / 80) || 30
+          : baseInr;
+        amount *= quantity;
         desc = `TAL Issue Purchase: ${magazine.issue_name}`;
         
-        shippingFee = currency === 'USD'
-          ? (magazine.shipping_usd || 15)
-          : (magazine.shipping_inr || 150);
+        shippingFee = currency === 'USD' ? 15 : 150;
       }
-    } else if (plan === '1_year') {
+    } else if (plan === '1_year' || plan === 'annual') {
       amount = currency === 'USD' ? 400 : 30000;
       desc = 'TAL Subscription: 1 Year';
       shippingFee = currency === 'USD' ? 15 : 150;
@@ -666,5 +681,6 @@ app.get('/magazine-download', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Backend server listening on http://localhost:${port}`);
+  console.log(`Backend server listening on port ${port}`);
 });
+

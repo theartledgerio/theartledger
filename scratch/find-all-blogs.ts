@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function run() {
   const { data, error } = await supabase
     .from('blog_submissions')
-    .select('id, title, content');
+    .select('id, title, status, published_at, created_at, short_description');
 
   if (error) {
     console.error('Error fetching blogs:', error);
@@ -19,8 +19,10 @@ async function run() {
     for (const blog of data) {
       console.log(`ID: ${blog.id}`);
       console.log(`Title: ${blog.title}`);
-      const imgMatches = blog.content ? blog.content.match(/<img[^>]+src="([^">]+)"/g) : [];
-      console.log(`Images:`, imgMatches);
+      console.log(`Status: ${blog.status}`);
+      console.log(`Published At: ${blog.published_at}`);
+      console.log(`Created At: ${blog.created_at}`);
+      console.log(`Excerpt: ${blog.short_description}`);
       console.log('---');
     }
   }

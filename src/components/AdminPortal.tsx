@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
+import { API_BASE_URL } from '../config';
 
 interface AdminPortalProps {
   onChangePage?: (pageId: string) => void;
@@ -408,7 +409,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     setRecoveryStatus('loading');
     setErrorMsg('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/forgot-password`, {
+      const res = await fetch(`${API_BASE_URL}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
