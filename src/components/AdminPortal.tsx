@@ -52,7 +52,7 @@ const DragDropFileZone: React.FC<{
       setIsUploading(true);
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const bucketName = type === 'pdf' ? 'magazine_pdfs' : 'public_images';
+      const bucketName = 'blog-images';
       
       const { error } = await supabase.storage.from(bucketName).upload(fileName, file);
       if (error) throw error;
@@ -568,14 +568,14 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('magazine_pdfs')
+        .from('blog-images')
         .upload(filePath, file);
 
       if (uploadError) {
         throw uploadError;
       }
 
-      const { data } = supabase.storage.from('magazine_pdfs').getPublicUrl(filePath);
+      const { data } = supabase.storage.from('blog-images').getPublicUrl(filePath);
       setMagPdfUrl(data.publicUrl);
       triggerToast('PDF uploaded successfully!');
     } catch (error: any) {
