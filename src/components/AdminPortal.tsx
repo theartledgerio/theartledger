@@ -43,6 +43,12 @@ const DragDropFileZone: React.FC<{
   const handleDragLeave = () => setIsDragging(false);
 
   const processFile = async (file: File) => {
+    const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+    if (file.size > MAX_SIZE_BYTES) {
+      alert(`File size exceeds maximum allowed limit of 100 MB. (File size: ${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
+      return;
+    }
+
     if (onFileSelect) {
       onFileSelect(file);
       return;
@@ -561,6 +567,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     const file = 'target' in fileOrEvent ? fileOrEvent.target.files?.[0] : fileOrEvent;
     if (!file) return;
 
+    const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+    if (file.size > MAX_SIZE_BYTES) {
+      triggerToast(`File size exceeds maximum allowed limit of 100 MB. (${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
+      return;
+    }
+
     try {
       triggerToast('Uploading PDF...');
       const fileExt = file.name.split('.').pop();
@@ -624,6 +636,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           shipping_usd: parseFloat(magShippingUsd) || 15.0,
           pdf_url: magPdfUrl,
           cover_image_url: magCoverUrl,
+          preview_pages: magPreviewPages ? magPreviewPages.split(',').map(s => s.trim()).filter(Boolean) : [],
           status: magStatus
         };
 
@@ -1964,13 +1977,25 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
                     {/* DRAG & DROP ONLINE PRINT PDF FILE ZONE */}
                     <DragDropFileZone
-                      label="Online Print PDF File (Drag & Drop or Select File)"
+                      label="1. Full Digital Magazine PDF File (Max 100 MB)"
                       accept="application/pdf"
                       value={magPdfUrl}
                       onChange={(url) => setMagPdfUrl(url)}
                       onFileSelect={handlePdfUpload}
                       placeholder="https://supabase.co/storage/v1/object/public/..."
                       type="pdf"
+                    />
+
+                    {/* DRAG & DROP INDIVIDUAL READER PAGES / SPREADS ZONE */}
+                    <DragDropFileZone
+                      label="2. Digital Reader Preview Pages / Image Spreads (Max 100 MB per file)"
+                      accept="image/*"
+                      value={magPreviewPages}
+                      onChange={(url) => {
+                        setMagPreviewPages(prev => prev ? `${prev}, ${url}` : url);
+                      }}
+                      placeholder="Comma-separated page URLs (e.g. https://...page1.jpg, https://...page2.jpg)"
+                      type="image"
                     />
                   </div>
                 )}
