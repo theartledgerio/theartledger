@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, Download, CreditCard, ChevronLeft, ChevronRight, X, Sparkles, CheckCircle2, Sun, Moon, Share2, MapPin, Locate, Loader2 } from 'lucide-react';
+import { BookOpen, Download, CreditCard, ChevronLeft, ChevronRight, X, Sparkles, CheckCircle2, Sun, Moon, Share2, MapPin, Locate, Loader2, Lock, Unlock } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useCurrency } from '../CurrencyContext';
 import { API_BASE_URL } from '../config';
@@ -222,6 +222,37 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
     loadMagazines();
   }, []);
 
+  const [purchasedMagIds, setPurchasedMagIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadUserPurchases() {
+      if (!user?.email) {
+        setPurchasedMagIds([]);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('magazine_orders')
+          .select('magazine_id, payment_status')
+          .eq('user_email', user.email)
+          .eq('payment_status', 'completed');
+        if (error) {
+          // If table doesn't exist yet or fails, check localStorage fallback
+          const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
+          setPurchasedMagIds(local);
+        } else if (data) {
+          const ids = data.map((o: any) => o.magazine_id).filter(Boolean);
+          const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
+          setPurchasedMagIds(Array.from(new Set([...ids, ...local])));
+        }
+      } catch (e) {
+        const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
+        setPurchasedMagIds(local);
+      }
+    }
+    loadUserPurchases();
+  }, [user]);
+
   useEffect(() => {
     let timer: any = null;
     if (autoFlip && previewOpen && activeIssue) {
@@ -395,6 +426,16 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           setIsPurchased(true);
           setIsPending(false);
 
+          if (activeIssue?.id) {
+            setPurchasedMagIds(prev => {
+              const updated = Array.from(new Set([...prev, activeIssue.id]));
+              if (user?.email) {
+                localStorage.setItem(`purchased_mags_${user.email}`, JSON.stringify(updated));
+              }
+              return updated;
+            });
+          }
+
           await fetch(`${API_BASE_URL}/payment-webhook`, {
             method: 'POST',
             headers: {
@@ -489,30 +530,30 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-4">
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                <button
-                  onClick={() => handleOpenPurchase('single')}
-                  className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full sm:w-auto rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
-                >
-                  <span>Buy Physical Copy</span>
-                </button>
+              <button
+                onClick={() => handleOpenPurchase('single')}
+                className="group flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
+              >
+                <span>Order Physical Print Copy</span>
+              </button>
 
+              {purchasedMagIds.includes(activeIssue.id) ? (
+                <button
+                  onClick={() => setPreviewOpen(true)}
+                  className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer shadow-lg"
+                >
+                  <Unlock className="w-4 h-4 text-emerald-200" />
+                  <span>Read Digital Edition (Unlocked)</span>
+                </button>
+              ) : (
                 <button
                   onClick={() => handleOpenPurchase('digital_single')}
-                  className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full sm:w-auto rounded-full bg-white text-midnight border border-slate-300 hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-sm cursor-pointer"
+                  className="flex items-center gap-2.5 px-8 py-4 rounded-full border border-slate-300 bg-white text-midnight hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer"
                 >
-                  <CreditCard className="w-4 h-4 text-turquoise" />
-                  <span>Buy Digital Copy</span>
+                  <Lock className="w-4 h-4 text-amber-600" />
+                  <span>Read Digital Edition (Unlock Digital)</span>
                 </button>
-              </div>
-
-              <button
-                onClick={() => setPreviewOpen(true)}
-                className="flex items-center gap-2.5 px-8 py-4 rounded-full border border-slate-200 text-midnight hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Read Digital Copy</span>
-              </button>
+              )}
 
               {isHome && onChangePage && (
                 <button
@@ -719,6 +760,17 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
+                      <div className="absolute top-2 right-2 z-10">
+                        {purchasedMagIds.includes(issue.id) ? (
+                          <span className="p-1.5 rounded-full bg-emerald-500/90 text-white backdrop-blur-md inline-flex shadow-sm" title="Digital Edition Unlocked">
+                            <Unlock className="w-3 h-3" />
+                          </span>
+                        ) : (
+                          <span className="p-1.5 rounded-full bg-black/60 text-amber-300 backdrop-blur-md inline-flex shadow-sm" title="Locked - Digital Purchase Required">
+                            <Lock className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                         <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">
                           VIEW EDITION
@@ -774,18 +826,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </span>
                 </div>
 
-                {/* Right Controls: Buy Digital Copy, Page Count & Close */}
+                {/* Right Controls: Page Count & Close */}
                 <div className="flex items-center gap-3 pointer-events-auto">
-                  <button
-                    onClick={() => {
-                      setPreviewOpen(false);
-                      handleOpenPurchase('digital_single');
-                    }}
-                    className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-full bg-turquoise text-midnight hover:bg-white font-sans font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer shadow-lg hover:scale-105"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Buy Digital Copy</span>
-                  </button>
 
                   <span className="text-[11px] font-mono text-white/80 font-bold bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
                     {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
@@ -826,11 +868,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       className="w-full h-full flex items-center justify-center bg-transparent"
                     >
                       {/* Left Page */}
-                      <div className={`${isMobileReader ? 'w-full' : 'w-1/2'} h-full relative flex items-center justify-center bg-white overflow-hidden`}>
+                      <div className={`${isMobileReader ? 'w-full' : 'w-1/2'} h-full relative flex items-center justify-center bg-white overflow-hidden select-none`}>
                         <img
                           src={activeIssue.pages[currentPageIndex]}
                           alt="Magazine left page"
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain pointer-events-auto select-none"
+                          onContextMenu={(e) => e.preventDefault()}
+                          onDragStart={(e) => e.preventDefault()}
                           referrerPolicy="no-referrer"
                         />
                         {/* Spine shadow crease */}
@@ -841,11 +885,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
                       {/* Right Page */}
                       {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
-                        <div className="w-1/2 h-full relative flex items-center justify-center bg-white overflow-hidden border-l border-black/10">
+                        <div className="w-1/2 h-full relative flex items-center justify-center bg-white overflow-hidden border-l border-black/10 select-none">
                           <img
                             src={activeIssue.pages[currentPageIndex + 1]}
                             alt="Magazine right page"
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain pointer-events-auto select-none"
+                            onContextMenu={(e) => e.preventDefault()}
+                            onDragStart={(e) => e.preventDefault()}
                             referrerPolicy="no-referrer"
                           />
                           {/* Spine shadow crease */}
@@ -927,16 +973,18 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     PAYMENT ID: {receiptId}
                   </span>
                   
-                  {purchasePlan === 'digital_single' && activeIssue.pdfUrl && (
-                    <a
-                      href={activeIssue.pdfUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                  {purchasePlan === 'digital_single' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPurchaseOpen(false);
+                        setPreviewOpen(true);
+                      }}
                       className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full rounded-xl bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
                     >
-                      <Download className="w-4 h-4" />
-                      <span>Download Your PDF</span>
-                    </a>
+                      <BookOpen className="w-4 h-4 text-turquoise" />
+                      <span>Read Online Now</span>
+                    </button>
                   )}
                 </motion.div>
               ) : (

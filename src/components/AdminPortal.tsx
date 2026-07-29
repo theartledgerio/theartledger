@@ -95,7 +95,7 @@ const DragDropFileZone: React.FC<{
       >
         <input
           type="file"
-          accept={accept}
+          accept={accept || (type === 'image' ? "image/*,.png,.jpg,.jpeg,.webp,.svg,.gif,.bmp,.tiff" : "application/pdf")}
           onChange={handleFileInput}
           disabled={isUploading}
           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
