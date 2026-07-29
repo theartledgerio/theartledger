@@ -43,12 +43,6 @@ const DragDropFileZone: React.FC<{
   const handleDragLeave = () => setIsDragging(false);
 
   const processFile = async (file: File) => {
-    const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
-    if (file.size > MAX_SIZE_BYTES) {
-      alert(`File size exceeds maximum allowed limit of 100 MB. (File size: ${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
-      return;
-    }
-
     if (onFileSelect) {
       onFileSelect(file);
       return;
@@ -199,7 +193,11 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [magDigitalPriceUsd, setMagDigitalPriceUsd] = useState('10');
   const [magShippingInr, setMagShippingInr] = useState('150');
   const [magShippingUsd, setMagShippingUsd] = useState('15');
-  const [magPreviewPages, setMagPreviewPages] = useState(''); // Comma separated URLs
+  const [magPreviewPage1, setMagPreviewPage1] = useState('');
+  const [magPreviewPage2, setMagPreviewPage2] = useState('');
+  const [magPreviewPage3, setMagPreviewPage3] = useState('');
+  const [magPreviewPage4, setMagPreviewPage4] = useState('');
+  const [magPreviewPage5, setMagPreviewPage5] = useState('');
   const [magStatus, setMagStatus] = useState('published');
   const [magEditorNote, setMagEditorNote] = useState('');
   const [magEditorName, setMagEditorName] = useState('');
@@ -490,7 +488,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setMagDigitalPriceUsd(item && item.digital_pdf_price_usd ? item.digital_pdf_price_usd.toString() : '10');
       setMagShippingInr(item && item.shipping_inr ? item.shipping_inr.toString() : '150');
       setMagShippingUsd(item && item.shipping_usd ? item.shipping_usd.toString() : '15');
-      setMagPreviewPages(item && item.preview_pages ? item.preview_pages.join(', ') : '');
+      const pages = item && Array.isArray(item.preview_pages) ? item.preview_pages : [];
+      setMagPreviewPage1(pages[0] || '');
+      setMagPreviewPage2(pages[1] || '');
+      setMagPreviewPage3(pages[2] || '');
+      setMagPreviewPage4(pages[3] || '');
+      setMagPreviewPage5(pages[4] || '');
       setMagStatus(item ? item.status : 'published');
       setMagEditorNote(item ? item.editor_note || '' : '');
       setMagEditorName(item ? item.editor_name || '' : '');
@@ -567,12 +570,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     const file = 'target' in fileOrEvent ? fileOrEvent.target.files?.[0] : fileOrEvent;
     if (!file) return;
 
-    const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
-    if (file.size > MAX_SIZE_BYTES) {
-      triggerToast(`File size exceeds maximum allowed limit of 100 MB. (${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
-      return;
-    }
-
     try {
       triggerToast('Uploading PDF...');
       const fileExt = file.name.split('.').pop();
@@ -636,7 +633,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           shipping_usd: parseFloat(magShippingUsd) || 15.0,
           pdf_url: magPdfUrl,
           cover_image_url: magCoverUrl,
-          preview_pages: magPreviewPages ? magPreviewPages.split(',').map(s => s.trim()).filter(Boolean) : [],
+          preview_pages: [magPreviewPage1, magPreviewPage2, magPreviewPage3, magPreviewPage4, magPreviewPage5].filter(Boolean),
           status: magStatus
         };
 
@@ -1977,26 +1974,73 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
                     {/* DRAG & DROP ONLINE PRINT PDF FILE ZONE */}
                     <DragDropFileZone
-                      label="1. Full Digital Magazine PDF File (Max 100 MB)"
+                      label="Full Digital Magazine PDF File"
                       accept="application/pdf"
                       value={magPdfUrl}
                       onChange={(url) => setMagPdfUrl(url)}
                       onFileSelect={handlePdfUpload}
-                      placeholder="https://supabase.co/storage/v1/object/public/..."
+                      placeholder="Upload magazine PDF or paste direct URL..."
                       type="pdf"
                     />
 
-                    {/* DRAG & DROP INDIVIDUAL READER PAGES / SPREADS ZONE */}
-                    <DragDropFileZone
-                      label="2. Digital Reader Preview Pages / Image Spreads (Max 100 MB per file)"
-                      accept="image/*"
-                      value={magPreviewPages}
-                      onChange={(url) => {
-                        setMagPreviewPages(prev => prev ? `${prev}, ${url}` : url);
-                      }}
-                      placeholder="Comma-separated page URLs (e.g. https://...page1.jpg, https://...page2.jpg)"
-                      type="image"
-                    />
+                    {/* 5 INDIVIDUAL DIGITAL READER PREVIEW PAGE UPLOADS */}
+                    <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-4">
+                      <div>
+                        <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block mb-1">
+                          Digital Reader Pages (5 Pages Preview)
+                        </span>
+                        <p className="text-[11px] text-slate-500 font-sans">
+                          Upload 5 individual page images to build the interactive flipbook reader.
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <DragDropFileZone
+                          label="Preview Page 1 (Cover / Spread 1 Left)"
+                          accept="image/*"
+                          value={magPreviewPage1}
+                          onChange={(url) => setMagPreviewPage1(url)}
+                          placeholder="Page 1 image URL..."
+                          type="image"
+                        />
+
+                        <DragDropFileZone
+                          label="Preview Page 2 (Spread 1 Right)"
+                          accept="image/*"
+                          value={magPreviewPage2}
+                          onChange={(url) => setMagPreviewPage2(url)}
+                          placeholder="Page 2 image URL..."
+                          type="image"
+                        />
+
+                        <DragDropFileZone
+                          label="Preview Page 3 (Spread 2 Left)"
+                          accept="image/*"
+                          value={magPreviewPage3}
+                          onChange={(url) => setMagPreviewPage3(url)}
+                          placeholder="Page 3 image URL..."
+                          type="image"
+                        />
+
+                        <DragDropFileZone
+                          label="Preview Page 4 (Spread 2 Right)"
+                          accept="image/*"
+                          value={magPreviewPage4}
+                          onChange={(url) => setMagPreviewPage4(url)}
+                          placeholder="Page 4 image URL..."
+                          type="image"
+                        />
+
+                        <DragDropFileZone
+                          label="Preview Page 5 (Back Cover / Spread 3)"
+                          accept="image/*"
+                          value={magPreviewPage5}
+                          onChange={(url) => setMagPreviewPage5(url)}
+                          placeholder="Page 5 image URL..."
+                          type="image"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
