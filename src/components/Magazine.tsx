@@ -183,10 +183,16 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           if (m.preview_pages && Array.isArray(m.preview_pages) && m.preview_pages.length > 0) {
             previewPages = m.preview_pages.filter(Boolean);
           }
-          // If no preview pages provided, use cover_image_url if present
-          if (previewPages.length === 0 && m.cover_image_url) {
-            previewPages = [m.cover_image_url];
+          // Combine coverUrl and preview_pages so reader always has a multi-page spread
+          const allPages: string[] = [];
+          if (m.cover_image_url) {
+            allPages.push(m.cover_image_url);
           }
+          previewPages.forEach(p => {
+            if (!allPages.includes(p)) {
+              allPages.push(p);
+            }
+          });
 
           return {
             id: m.id,
@@ -198,7 +204,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             price: m.single_issue_price || 2500,
             pdfUrl: m.pdf_url,
             digitalPrice: m.digital_pdf_price || 299,
-            pages: previewPages,
+            pages: allPages,
             editorNote: m.editor_note,
             editorName: m.editor_name,
             editorImageUrl: m.editor_image_url
