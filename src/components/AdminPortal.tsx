@@ -338,7 +338,24 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           .from('events')
           .select('*')
           .order('event_date', { ascending: false });
-        setEventsList(evData || []);
+        
+        const freedomDefault = {
+          id: 'freedom-season-3',
+          title: 'Freedom - Season 3',
+          short_description: 'International Art Exhibition & Award Event',
+          long_description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar at Nehru Centre AC Art Gallery, Worli, Mumbai.',
+          event_date: '2026-08-11',
+          time: '12:00 PM - 7:00 PM',
+          location: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
+          artist: 'SKAF India (Curator: Siddharth Karmakar)',
+          featured_image_url: 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png',
+          status: 'published',
+          type: 'Exhibition'
+        };
+
+        const list = evData || [];
+        const hasFreedom = list.some(item => (item.title || '').toLowerCase().includes('freedom'));
+        setEventsList(hasFreedom ? list : [freedomDefault, ...list]);
       }
       if (activeTab === 'hero' || activeTab === 'dashboard') {
         const localSaved = localStorage.getItem('tal_hero_cards');
