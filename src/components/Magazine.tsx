@@ -179,16 +179,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
 
         const mapped: MagazineEdition[] = (data || []).map(m => {
           // Setup preview pages from database or use defaults
-          let previewPages = [];
-          if (m.preview_pages && m.preview_pages.length > 0) {
-            previewPages = m.preview_pages;
-          } else {
-            previewPages = [
-              m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
-              'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=850',
-              'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600&h=850',
-              'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=600&h=850'
-            ];
+          let previewPages: string[] = [];
+          if (m.preview_pages && Array.isArray(m.preview_pages) && m.preview_pages.length > 0) {
+            previewPages = m.preview_pages.filter(Boolean);
+          }
+          // If no preview pages provided, use cover_image_url if present
+          if (previewPages.length === 0 && m.cover_image_url) {
+            previewPages = [m.cover_image_url];
           }
 
           return {
@@ -196,7 +193,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             issueNumber: `Issue No. ${m.issue_number}`,
             title: m.issue_name,
             season: m.tagline || 'Recent Release',
-            coverUrl: m.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=850',
+            coverUrl: m.cover_image_url || '',
             description: m.short_summary || m.long_description || 'A fine art periodical published by The Art Ledger.',
             price: m.single_issue_price || 2500,
             pdfUrl: m.pdf_url,
@@ -537,22 +534,24 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 <span>Order Physical Print Copy</span>
               </button>
 
-              {purchasedMagIds.includes(activeIssue.id) ? (
-                <button
-                  onClick={() => setPreviewOpen(true)}
-                  className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer shadow-lg"
-                >
-                  <Unlock className="w-4 h-4 text-emerald-200" />
-                  <span>Read Digital Edition (Unlocked)</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleOpenPurchase('digital_single')}
-                  className="flex items-center gap-2.5 px-8 py-4 rounded-full border border-slate-300 bg-white text-midnight hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer"
-                >
-                  <Lock className="w-4 h-4 text-amber-600" />
-                  <span>Read Digital Edition (Unlock Digital)</span>
-                </button>
+              {(activeIssue.issueNumber.includes('4') || activeIssue.issueNumber.includes('3') || activeIssue.title.toLowerCase().includes('v4') || activeIssue.title.toLowerCase().includes('v3') || activeIssue.title.toLowerCase().includes('issue 4') || activeIssue.title.toLowerCase().includes('issue 3') || activeIssue.title.toLowerCase().includes('vol 4') || activeIssue.title.toLowerCase().includes('vol 3')) && (
+                purchasedMagIds.includes(activeIssue.id) ? (
+                  <button
+                    onClick={() => setPreviewOpen(true)}
+                    className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer shadow-lg"
+                  >
+                    <Unlock className="w-4 h-4 text-emerald-200" />
+                    <span>Read Digital Edition (Unlocked)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenPurchase('digital_single')}
+                    className="flex items-center gap-2.5 px-8 py-4 rounded-full border border-slate-300 bg-white text-midnight hover:border-turquoise hover:text-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4 text-amber-600" />
+                    <span>Read Digital Edition (Unlock Digital)</span>
+                  </button>
+                )
               )}
 
               {isHome && onChangePage && (
@@ -667,22 +666,24 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         </div>
       </div>
 
-      {/* 2. Editorial Perspective Banner (Circular Headshot + Big Quote) */}
-      {!isHome && (
+      {/* 2. Editorial Perspective Banner (Circular Headshot + Big Quote) - Only for magv4 (Issue 4) */}
+      {!isHome && (activeIssue.issueNumber.includes('4') || activeIssue.title.toLowerCase().includes('v4') || activeIssue.title.toLowerCase().includes('vol 4') || activeIssue.title.toLowerCase().includes('issue 4')) && (
         <div className="bg-[#0B132B] text-white py-20 mb-28">
           <div className="max-w-7xl mx-auto px-6 md:px-12">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
               {/* Editor Circular Avatar */}
               <div className="lg:col-span-4 flex flex-col items-center justify-center text-center">
-                <div className="relative w-44 h-44 rounded-full overflow-hidden p-1 border-2 border-turquoise/30 mb-4 bg-slate-800">
-                  <img
-                    src={activeIssue.editorImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=350&h=350"}
-                    alt={activeIssue.editorName || "Editor-in-Chief"}
-                    className="w-full h-full object-cover rounded-full"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+                {activeIssue.editorImageUrl && (
+                  <div className="relative w-44 h-44 rounded-full overflow-hidden p-1 border-2 border-turquoise/30 mb-4 bg-slate-800">
+                    <img
+                      src={activeIssue.editorImageUrl}
+                      alt={activeIssue.editorName || "Editor-in-Chief"}
+                      className="w-full h-full object-cover rounded-full"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )}
                 {activeIssue.editorName && (
                   <span className="px-3 py-1 bg-turquoise/10 border border-turquoise/20 rounded text-[9px] font-mono tracking-widest text-turquoise font-bold uppercase">
                     {activeIssue.editorName}
