@@ -27,7 +27,7 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-blog',
     media_type: 'image',
-    media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
+    media_url: 'https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/1775684865943-1trurx.png',
     badge: 'ESSAY // CONTEMPORARY ART',
     title: 'In Conversation with Prajakta Potnis',
     subtitle: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
@@ -37,9 +37,9 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-magazine',
     media_type: 'image',
-    media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
-    badge: 'LATEST PRINT ISSUE // NO. 42',
-    title: 'The Digital Renaissance',
+    media_url: 'https://i.postimg.cc/DwBxZ3X9/tal-issue-4-cover-page-0001-(1).jpg',
+    badge: 'LATEST PRINT ISSUE // NO. 4',
+    title: 'Issue 04 - July 2026',
     subtitle: 'Special quarterly print release examining new media art & generative algorithms.',
     link_page: 'magazine',
     link_text: 'Explore Magazine'
@@ -47,7 +47,7 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-event',
     media_type: 'image',
-    media_url: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
+    media_url: 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png',
     badge: 'UPCOMING EXHIBITION // MUMBAI',
     title: 'Freedom - Season 3',
     subtitle: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
@@ -118,7 +118,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        const eventMediaUrl = freedomEventData?.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200';
+        const eventMediaUrl = freedomEventData?.featured_image_url || 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png';
         const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
         const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
@@ -144,7 +144,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           {
             id: 'hero-blog',
             media_type: 'image',
-            media_url: blogMediaUrl,
+            media_url: blogMediaUrl || DEFAULT_3_HERO_CARDS[0].media_url,
             badge: 'ESSAY // CONTEMPORARY ART',
             title: blogTitle,
             subtitle: blogSubtitle,
@@ -154,7 +154,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           {
             id: 'hero-magazine',
             media_type: 'image',
-            media_url: magData?.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
+            media_url: magData?.cover_image_url || DEFAULT_3_HERO_CARDS[1].media_url,
             badge: `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 42}`,
             title: magData?.issue_name || 'The Digital Renaissance',
             subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining new media art.',
@@ -164,7 +164,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           {
             id: 'hero-event',
             media_type: 'image',
-            media_url: eventMediaUrl,
+            media_url: eventMediaUrl || DEFAULT_3_HERO_CARDS[2].media_url,
             badge: 'EXHIBITION // FEATURED',
             title: eventTitle,
             subtitle: eventSubtitle,
@@ -371,22 +371,37 @@ export default function Hero({ onChangePage }: HeroProps) {
                 onClick={() => onChangePage(card.link_page || 'blogs')}
                 className="snap-center shrink-0 w-[82vw] aspect-[3/4] rounded-2xl overflow-hidden relative bg-slate-900 border border-white/10 shadow-xl cursor-pointer"
               >
-                {card.media_type === 'video' ? (
-                  <video
-                    src={card.media_url}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={card.media_url}
-                    alt={card.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
+                {/* Card Media Background */}
+                <div className="absolute inset-0 bg-slate-900 overflow-hidden">
+                  {card.media_type === 'video' ? (
+                    <video
+                      ref={(el) => { videoRefs.current[card.id] = el; }}
+                      src={card.media_url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : (
+                    <img
+                      src={card.media_url || DEFAULT_3_HERO_CARDS[index % DEFAULT_3_HERO_CARDS.length].media_url}
+                      alt={card.title}
+                      className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-700"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        // Fallback to default card image if current URL fails to load
+                        const fallbackUrl = DEFAULT_3_HERO_CARDS[index % DEFAULT_3_HERO_CARDS.length].media_url;
+                        if (e.currentTarget.src !== fallbackUrl) {
+                          e.currentTarget.src = fallbackUrl;
+                        }
+                      }}
+                    />
+                  )}
+                  {/* Subtle vignette dark overlays for readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/30" />
+                </div>
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-5 text-white">
                   <h3 className="text-base font-sans font-bold leading-tight text-white mb-1.5 line-clamp-2">
                     {card.title}

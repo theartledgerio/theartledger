@@ -198,6 +198,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [magPreviewPage3, setMagPreviewPage3] = useState('');
   const [magPreviewPage4, setMagPreviewPage4] = useState('');
   const [magPreviewPage5, setMagPreviewPage5] = useState('');
+  const [magPreviewPage6, setMagPreviewPage6] = useState('');
   const [magStatus, setMagStatus] = useState('published');
   const [magEditorNote, setMagEditorNote] = useState('');
   const [magEditorName, setMagEditorName] = useState('');
@@ -494,6 +495,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setMagPreviewPage3(pages[2] || '');
       setMagPreviewPage4(pages[3] || '');
       setMagPreviewPage5(pages[4] || '');
+      setMagPreviewPage6(pages[5] || '');
       setMagStatus(item ? item.status : 'published');
       setMagEditorNote(item ? item.editor_note || '' : '');
       setMagEditorName(item ? item.editor_name || '' : '');
@@ -632,7 +634,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           shipping_inr: parseFloat(magShippingInr) || 150.0,
           shipping_usd: parseFloat(magShippingUsd) || 15.0,
           cover_image_url: magCoverUrl,
-          preview_pages: [magPreviewPage1, magPreviewPage2, magPreviewPage3, magPreviewPage4, magPreviewPage5].filter(Boolean),
+          preview_pages: [magPreviewPage1, magPreviewPage2, magPreviewPage3, magPreviewPage4, magPreviewPage5, magPreviewPage6].filter(Boolean),
           editor_note: magEditorNote,
           editor_name: magEditorName,
           editor_image_url: magEditorImageUrl,
@@ -2034,11 +2036,20 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         />
 
                         <DragDropFileZone
-                          label="Preview Page 5 (Back Cover / Spread 3)"
+                          label="Preview Page 5 (Spread 3 Left)"
                           accept="image/*"
                           value={magPreviewPage5}
                           onChange={(url) => setMagPreviewPage5(url)}
                           placeholder="Page 5 image URL..."
+                          type="image"
+                        />
+
+                        <DragDropFileZone
+                          label="Preview Page 6 (Back Cover / Spread 3 Right)"
+                          accept="image/*"
+                          value={magPreviewPage6}
+                          onChange={(url) => setMagPreviewPage6(url)}
+                          placeholder="Page 6 image URL..."
                           type="image"
                         />
                       </div>

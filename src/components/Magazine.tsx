@@ -183,9 +183,18 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           if (m.preview_pages && Array.isArray(m.preview_pages) && m.preview_pages.length > 0) {
             previewPages = m.preview_pages.filter((p: string) => typeof p === 'string' && p.trim().length > 0);
           }
+
+          // Use uploaded preview pages, or fallback to 5-6 sample fine art magazine pages
+          const samplePages = [
+            m.cover_image_url || '/blog1/1.png',
+            '/blog1/2.png',
+            '/blog1/3.png',
+            '/blog1/4.png',
+            '/blog1/5.png',
+            '/blog1/6.png'
+          ];
           
-          // Use uploaded 5 preview pages directly, or fallback to cover image if no preview pages uploaded
-          const displayPages: string[] = previewPages.length > 0 ? previewPages : (m.cover_image_url ? [m.cover_image_url] : []);
+          const displayPages: string[] = previewPages.length >= 3 ? previewPages : samplePages;
 
           return {
             id: m.id,
@@ -592,7 +601,11 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               >
                 <div
                   id="interactive-3d-magazine"
-                  onClick={() => setPreviewOpen(true)}
+                  onClick={() => {
+                    setReaderViewMode('spread');
+                    setCurrentPageIndex(0);
+                    setPreviewOpen(true);
+                  }}
                   className="relative w-full aspect-[3/4] [transform-style:preserve-3d] transition-all duration-[800ms] ease-out cursor-pointer group"
                   style={{
                     transform: 'rotateY(-20deg) rotateX(8deg) rotateZ(-3deg)',
@@ -837,8 +850,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </span>
                 </div>
 
-                {/* Center: View Switcher (Spread Gallery vs Full PDF Document) */}
-                {activeIssue.pdfUrl && (
+                {/* Center: View Switcher (Spread Gallery vs Full PDF Document - restricted to unlocked users) */}
+                {activeIssue.pdfUrl && (isAdminUser || purchasedMagIds.includes(activeIssue.id)) && (
                   <div className="flex items-center p-1 bg-black/50 backdrop-blur-md rounded-full border border-white/15">
                     <button
                       onClick={() => setReaderViewMode('spread')}
@@ -846,7 +859,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         readerViewMode === 'spread' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
                       }`}
                     >
-                      Gallery Spreads
+                      5-Page Preview Spreads
                     </button>
                     <button
                       onClick={() => setReaderViewMode('pdf')}
@@ -854,7 +867,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         readerViewMode === 'pdf' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
                       }`}
                     >
-                      Full PDF Viewer
+                      Full Digital PDF
                     </button>
                   </div>
                 )}
