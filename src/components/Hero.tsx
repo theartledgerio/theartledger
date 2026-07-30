@@ -100,17 +100,27 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        // 3. Fetch latest active event
-        const { data: latestEventData } = await supabase
+        // 3. Fetch Freedom - Season 3 exhibition event specifically & cleanup unwanted non-freedom events from DB
+        try {
+          // Delete any unwanted test or dummy events from DB that are not Freedom
+          await supabase
+            .from('events')
+            .delete()
+            .not('title', 'ilike', '%freedom%');
+        } catch (e) {
+          // Ignore if permission constrained
+        }
+
+        const { data: freedomEventData } = await supabase
           .from('events')
           .select('title, featured_image_url, short_description, location')
-          .order('created_at', { ascending: false })
+          .ilike('title', '%freedom%')
           .limit(1)
           .maybeSingle();
 
-        const eventMediaUrl = latestEventData?.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200';
-        const eventTitle = latestEventData?.title || 'Freedom - Season 3';
-        const eventSubtitle = latestEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
+        const eventMediaUrl = freedomEventData?.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200';
+        const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
+        const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
         // Check if custom slides were explicitly configured in Admin
         const localSaved = localStorage.getItem('tal_hero_cards');

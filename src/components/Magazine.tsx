@@ -64,6 +64,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   const [autoFlip, setAutoFlip] = useState(false);
   const [readingMode, setReadingMode] = useState<'dark' | 'light'>('dark');
   const [editorNoteExpanded, setEditorNoteExpanded] = useState(false);
+  const [readerViewMode, setReaderViewMode] = useState<'spread' | 'pdf'>('spread');
   const [isMobileReader, setIsMobileReader] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -178,21 +179,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         if (error) throw error;
 
         const mapped: MagazineEdition[] = (data || []).map(m => {
-          // Setup preview pages from database or use defaults
           let previewPages: string[] = [];
           if (m.preview_pages && Array.isArray(m.preview_pages) && m.preview_pages.length > 0) {
-            previewPages = m.preview_pages.filter(Boolean);
+            previewPages = m.preview_pages.filter((p: string) => typeof p === 'string' && p.trim().length > 0);
           }
-          // Combine coverUrl and preview_pages so reader always has a multi-page spread
-          const allPages: string[] = [];
-          if (m.cover_image_url) {
-            allPages.push(m.cover_image_url);
-          }
-          previewPages.forEach(p => {
-            if (!allPages.includes(p)) {
-              allPages.push(p);
-            }
-          });
+          
+          // Use uploaded 5 preview pages directly, or fallback to cover image if no preview pages uploaded
+          const displayPages: string[] = previewPages.length > 0 ? previewPages : (m.cover_image_url ? [m.cover_image_url] : []);
 
           return {
             id: m.id,
@@ -204,7 +197,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             price: m.single_issue_price || 2500,
             pdfUrl: m.pdf_url,
             digitalPrice: m.digital_pdf_price || 299,
-            pages: allPages,
+            pages: displayPages,
             editorNote: m.editor_note,
             editorName: m.editor_name,
             editorImageUrl: m.editor_image_url
@@ -226,7 +219,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   }, []);
 
   const [purchasedMagIds, setPurchasedMagIds] = useState<string[]>([]);
-  const isAdminUser = user?.email?.toLowerCase().includes('admin') || user?.email?.toLowerCase() === 'ayush@artledger.com' || user?.email?.toLowerCase() === 'admin@artledger.com';
+  const isAdminUser = user?.email?.toLowerCase().trim() === 'admin@theartledger.com';
 
   useEffect(() => {
     async function loadUserPurchases() {
@@ -543,11 +536,22 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               {(activeIssue.issueNumber.includes('4') || activeIssue.issueNumber.includes('3') || activeIssue.title.toLowerCase().includes('v4') || activeIssue.title.toLowerCase().includes('v3') || activeIssue.title.toLowerCase().includes('issue 4') || activeIssue.title.toLowerCase().includes('issue 3') || activeIssue.title.toLowerCase().includes('vol 4') || activeIssue.title.toLowerCase().includes('vol 3')) && (
                 isAdminUser || purchasedMagIds.includes(activeIssue.id) ? (
                   <button
-                    onClick={() => setPreviewOpen(true)}
-                    className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer shadow-lg"
+                    onClick={() => {
+                      if (activeIssue.pdfUrl) {
+                        setReaderViewMode('pdf');
+                      } else {
+                        setReaderViewMode('spread');
+                      }
+                      setPreviewOpen(true);
+                    }}
+                    className="group flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-midnight text-white hover:bg-[#0E1A38] border border-turquoise/40 hover:border-turquoise font-sans font-bold uppercase text-[10px] tracking-[0.2em] transition-all duration-300 shadow-xl hover:shadow-turquoise/20 cursor-pointer relative overflow-hidden"
                   >
-                    <Unlock className="w-4 h-4 text-emerald-200" />
-                    <span>Read Digital Edition ({isAdminUser ? 'Admin Unlocked' : 'Unlocked'})</span>
+                    <span className="w-2 h-2 rounded-full bg-turquoise animate-ping shrink-0" />
+                    <BookOpen className="w-4 h-4 text-turquoise group-hover:scale-110 transition-transform" />
+                    <span className="text-white">Read Digital Edition</span>
+                    <span className="ml-1 px-2.5 py-0.5 rounded-full bg-turquoise/15 text-turquoise border border-turquoise/30 text-[8px] font-mono tracking-widest font-bold uppercase">
+                      {isAdminUser ? 'Admin Access' : 'Unlocked'}
+                    </span>
                   </button>
                 ) : (
                   <button
@@ -823,8 +827,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               transition={{ type: 'spring', damping: 25, stiffness: 140 }}
               className="relative w-full h-full max-w-6xl z-10 flex flex-col justify-between items-center pointer-events-none"
             >
-              {/* Minimal Floating Top Header */}
-              <div className="w-full flex items-center justify-between px-4 py-2 pointer-events-auto z-30">
+              {/* Minimal Floating Top Header with View Switcher */}
+              <div className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-2 pointer-events-auto z-30">
                 {/* Left: Issue Meta */}
                 <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
                   <div className="w-2 h-2 rounded-full bg-turquoise animate-pulse" />
@@ -833,12 +837,35 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   </span>
                 </div>
 
+                {/* Center: View Switcher (Spread Gallery vs Full PDF Document) */}
+                {activeIssue.pdfUrl && (
+                  <div className="flex items-center p-1 bg-black/50 backdrop-blur-md rounded-full border border-white/15">
+                    <button
+                      onClick={() => setReaderViewMode('spread')}
+                      className={`px-4 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        readerViewMode === 'spread' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
+                      }`}
+                    >
+                      Gallery Spreads
+                    </button>
+                    <button
+                      onClick={() => setReaderViewMode('pdf')}
+                      className={`px-4 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        readerViewMode === 'pdf' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
+                      }`}
+                    >
+                      Full PDF Viewer
+                    </button>
+                  </div>
+                )}
+
                 {/* Right Controls: Page Count & Close */}
                 <div className="flex items-center gap-3 pointer-events-auto">
-
-                  <span className="text-[11px] font-mono text-white/80 font-bold bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-                    {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
-                  </span>
+                  {readerViewMode === 'spread' && (
+                    <span className="text-[11px] font-mono text-white/80 font-bold bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                      {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
+                    </span>
+                  )}
 
                   <button
                     onClick={() => setPreviewOpen(false)}
@@ -850,73 +877,85 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 </div>
               </div>
 
-              {/* Floating Magazine Spread Center Stage */}
+              {/* Center Stage: PDF Viewer Mode or Interactive Image Spread */}
               <div className="relative w-full flex-1 my-2 lg:my-4 flex items-center justify-center pointer-events-auto overflow-hidden">
                 
-                {/* Previous Page Floating Button */}
-                {currentPageIndex > 0 && (
-                  <button
-                    onClick={() => { setCurrentPageIndex(prev => Math.max(0, prev - (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
-                    className="absolute left-2 md:left-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                )}
+                {readerViewMode === 'pdf' && activeIssue.pdfUrl ? (
+                  <div className="w-full h-full lg:max-w-5xl lg:max-h-[80vh] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-slate-900">
+                    <iframe
+                      src={`${activeIssue.pdfUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full border-none"
+                      title={`${activeIssue.title} PDF Document`}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {/* Previous Page Floating Button */}
+                    {currentPageIndex > 0 && (
+                      <button
+                        onClick={() => { setCurrentPageIndex(prev => Math.max(0, prev - (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                        className="absolute left-2 md:left-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                    )}
 
-                {/* The Floating Magazine Spread Container */}
-                <div className="relative w-full h-full lg:max-w-5xl lg:max-h-[78vh] lg:aspect-[3/2] flex items-center justify-center shadow-[0_30px_100px_rgba(0,0,0,0.9)] lg:rounded-lg overflow-hidden border border-white/15">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`spread-${currentPageIndex}`}
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="w-full h-full flex items-center justify-center bg-transparent"
-                    >
-                      {/* Left Page */}
-                      <div className={`${isMobileReader ? 'w-full' : 'w-1/2'} h-full relative flex items-center justify-center bg-white overflow-hidden select-none`}>
-                        <img
-                          src={activeIssue.pages[currentPageIndex]}
-                          alt="Magazine left page"
-                          className="w-full h-full object-contain pointer-events-auto select-none"
-                          onContextMenu={(e) => e.preventDefault()}
-                          onDragStart={(e) => e.preventDefault()}
-                          referrerPolicy="no-referrer"
-                        />
-                        {/* Spine shadow crease */}
-                        {!isMobileReader && (
-                          <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/25 to-transparent pointer-events-none" />
-                        )}
-                      </div>
+                    {/* The Floating Magazine Spread Container */}
+                    <div className="relative w-full h-full lg:max-w-5xl lg:max-h-[78vh] lg:aspect-[3/2] flex items-center justify-center shadow-[0_30px_100px_rgba(0,0,0,0.9)] lg:rounded-lg overflow-hidden border border-white/15">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={`spread-${currentPageIndex}`}
+                          initial={{ opacity: 0, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
+                          transition={{ duration: 0.35, ease: 'easeOut' }}
+                          className="w-full h-full flex items-center justify-center bg-transparent"
+                        >
+                          {/* Left Page */}
+                          <div className={`${isMobileReader ? 'w-full' : 'w-1/2'} h-full relative flex items-center justify-center bg-white overflow-hidden select-none`}>
+                            <img
+                              src={activeIssue.pages[currentPageIndex]}
+                              alt="Magazine left page"
+                              className="w-full h-full object-contain pointer-events-auto select-none"
+                              onContextMenu={(e) => e.preventDefault()}
+                              onDragStart={(e) => e.preventDefault()}
+                              referrerPolicy="no-referrer"
+                            />
+                            {/* Spine shadow crease */}
+                            {!isMobileReader && (
+                              <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/25 to-transparent pointer-events-none" />
+                            )}
+                          </div>
 
-                      {/* Right Page */}
-                      {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
-                        <div className="w-1/2 h-full relative flex items-center justify-center bg-white overflow-hidden border-l border-black/10 select-none">
-                          <img
-                            src={activeIssue.pages[currentPageIndex + 1]}
-                            alt="Magazine right page"
-                            className="w-full h-full object-contain pointer-events-auto select-none"
-                            onContextMenu={(e) => e.preventDefault()}
-                            onDragStart={(e) => e.preventDefault()}
-                            referrerPolicy="no-referrer"
-                          />
-                          {/* Spine shadow crease */}
-                          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
-                        </div>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
+                          {/* Right Page */}
+                          {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
+                            <div className="w-1/2 h-full relative flex items-center justify-center bg-white overflow-hidden border-l border-black/10 select-none">
+                              <img
+                                src={activeIssue.pages[currentPageIndex + 1]}
+                                alt="Magazine right page"
+                                className="w-full h-full object-contain pointer-events-auto select-none"
+                                onContextMenu={(e) => e.preventDefault()}
+                                onDragStart={(e) => e.preventDefault()}
+                                referrerPolicy="no-referrer"
+                              />
+                              {/* Spine shadow crease */}
+                              <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/25 to-transparent pointer-events-none" />
+                            </div>
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
 
-                {/* Next Page Floating Button */}
-                {currentPageIndex + (isMobileReader ? 1 : 2) < activeIssue.pages.length && (
-                  <button
-                    onClick={() => { setCurrentPageIndex(prev => Math.min(activeIssue.pages.length - 1, prev + (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
-                    className="absolute right-2 md:right-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
+                    {/* Next Page Floating Button */}
+                    {currentPageIndex + (isMobileReader ? 1 : 2) < activeIssue.pages.length && (
+                      <button
+                        onClick={() => { setCurrentPageIndex(prev => Math.min(activeIssue.pages.length - 1, prev + (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                        className="absolute right-2 md:right-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -985,6 +1024,9 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       type="button"
                       onClick={() => {
                         setPurchaseOpen(false);
+                        if (activeIssue.pdfUrl) {
+                          setReaderViewMode('pdf');
+                        }
                         setPreviewOpen(true);
                       }}
                       className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full rounded-xl bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"

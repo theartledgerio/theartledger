@@ -307,11 +307,64 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           sorted.forEach((b, i) => {
             b.featured = (i === 0);
           });
+          setBlogs(sorted);
+        } else {
+          // Fallback to default essays if database table is empty
+          setBlogs([
+            {
+              id: 'prajakta-potnis-essay',
+              title: 'In Conversation with Prajakta Potnis',
+              excerpt: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
+              content: '<p>Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.</p>',
+              image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=800',
+              readingTime: '8 min read',
+              author: 'Editorial Board',
+              category: 'Contemporary',
+              date: 'Recent',
+              featured: true
+            },
+            {
+              id: 'father-daughter-duo',
+              title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
+              excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
+              content: FATHER_DAUGHTER_BLOG_HTML,
+              image: '/blog1/1.png',
+              readingTime: '12 min read',
+              author: 'Editorial Board',
+              category: 'Art Market & Philosophy',
+              date: 'Mar 15, 2026',
+              featured: false
+            }
+          ]);
         }
-
-        setBlogs(sorted);
       } catch (err) {
         console.error('Error fetching blogs from database:', err);
+        setBlogs([
+          {
+            id: 'prajakta-potnis-essay',
+            title: 'In Conversation with Prajakta Potnis',
+            excerpt: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
+            content: '<p>Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.</p>',
+            image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=800',
+            readingTime: '8 min read',
+            author: 'Editorial Board',
+            category: 'Contemporary',
+            date: 'Recent',
+            featured: true
+          },
+          {
+            id: 'father-daughter-duo',
+            title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
+            excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
+            content: FATHER_DAUGHTER_BLOG_HTML,
+            image: '/blog1/1.png',
+            readingTime: '12 min read',
+            author: 'Editorial Board',
+            category: 'Art Market & Philosophy',
+            date: 'Mar 15, 2026',
+            featured: false
+          }
+        ]);
       } finally {
         setLoading(false);
       }

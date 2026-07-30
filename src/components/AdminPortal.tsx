@@ -2270,6 +2270,74 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
                 {formType === 'hero' && (
                   <div className="space-y-4">
+                    {/* QUICK SELECT FROM EXISTING CONTENT */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <label className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block">
+                        ⚡ Quick Autofill from Published Content (Blogs / Magazines / Events)
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return;
+                          const [type, id] = val.split(':');
+                          if (type === 'blog') {
+                            const item = blogsList.find(b => b.id === id);
+                            if (item) {
+                              const matchImg = (item.content || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+                              const extractedImg = matchImg ? matchImg[1] : '';
+                              setHeroBadge(`ESSAY // ${item.category || 'CONTEMPORARY'}`);
+                              setHeroTitle(item.title || '');
+                              setHeroSubtitle(item.short_description || '');
+                              setHeroMediaUrl(item.image_url || extractedImg || '');
+                              setHeroMediaType('image');
+                              setHeroLinkPage('blogs');
+                              setHeroLinkText('Read Full Essay');
+                            }
+                          } else if (type === 'magazine') {
+                            const item = magazinesList.find(m => m.id === id);
+                            if (item) {
+                              setHeroBadge(`LATEST PRINT // ISSUE NO. ${item.issue_number || 42}`);
+                              setHeroTitle(item.issue_name || '');
+                              setHeroSubtitle(item.tagline || item.short_summary || '');
+                              setHeroMediaUrl(item.cover_image_url || '');
+                              setHeroMediaType('image');
+                              setHeroLinkPage('magazine');
+                              setHeroLinkText('Explore Magazine');
+                            }
+                          } else if (type === 'event') {
+                            const item = eventsList.find(ev => ev.id === id);
+                            if (item) {
+                              setHeroBadge(`EXHIBITION // ${item.status?.toUpperCase() || 'FEATURED'}`);
+                              setHeroTitle(item.title || '');
+                              setHeroSubtitle(item.short_description || item.subtitle || '');
+                              setHeroMediaUrl(item.featured_image_url || item.image || '');
+                              setHeroMediaType('image');
+                              setHeroLinkPage('events');
+                              setHeroLinkText('View Exhibition');
+                            }
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight font-medium outline-none"
+                      >
+                        <option value="">-- Choose content to feature on Hero Card --</option>
+                        <optgroup label="📰 Journal & Essays (Blogs)">
+                          {blogsList.map(b => (
+                            <option key={b.id} value={`blog:${b.id}`}>Blog: {b.title}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="📖 Magazine Editions">
+                          {magazinesList.map(m => (
+                            <option key={m.id} value={`magazine:${m.id}`}>Magazine: Issue #{m.issue_number} - {m.issue_name}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🏛️ Events & Exhibitions">
+                          {eventsList.map(ev => (
+                            <option key={ev.id} value={`event:${ev.id}`}>Event: {ev.title}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Badge Tag</label>
