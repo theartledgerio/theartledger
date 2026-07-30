@@ -226,6 +226,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   }, []);
 
   const [purchasedMagIds, setPurchasedMagIds] = useState<string[]>([]);
+  const isAdminUser = user?.email?.toLowerCase().includes('admin') || user?.email?.toLowerCase() === 'ayush@artledger.com' || user?.email?.toLowerCase() === 'admin@artledger.com';
 
   useEffect(() => {
     async function loadUserPurchases() {
@@ -240,7 +241,6 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           .eq('user_email', user.email)
           .eq('payment_status', 'completed');
         if (error) {
-          // If table doesn't exist yet or fails, check localStorage fallback
           const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
           setPurchasedMagIds(local);
         } else if (data) {
@@ -541,13 +541,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               </button>
 
               {(activeIssue.issueNumber.includes('4') || activeIssue.issueNumber.includes('3') || activeIssue.title.toLowerCase().includes('v4') || activeIssue.title.toLowerCase().includes('v3') || activeIssue.title.toLowerCase().includes('issue 4') || activeIssue.title.toLowerCase().includes('issue 3') || activeIssue.title.toLowerCase().includes('vol 4') || activeIssue.title.toLowerCase().includes('vol 3')) && (
-                purchasedMagIds.includes(activeIssue.id) ? (
+                isAdminUser || purchasedMagIds.includes(activeIssue.id) ? (
                   <button
                     onClick={() => setPreviewOpen(true)}
                     className="flex items-center gap-2.5 px-8 py-4 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-sans font-bold uppercase text-[10px] tracking-widest transition-colors duration-300 cursor-pointer shadow-lg"
                   >
                     <Unlock className="w-4 h-4 text-emerald-200" />
-                    <span>Read Digital Edition (Unlocked)</span>
+                    <span>Read Digital Edition ({isAdminUser ? 'Admin Unlocked' : 'Unlocked'})</span>
                   </button>
                 ) : (
                   <button
@@ -768,7 +768,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute top-2 right-2 z-10">
-                        {purchasedMagIds.includes(issue.id) ? (
+                        {isAdminUser || purchasedMagIds.includes(issue.id) ? (
                           <span className="p-1.5 rounded-full bg-emerald-500/90 text-white backdrop-blur-md inline-flex shadow-sm" title="Digital Edition Unlocked">
                             <Unlock className="w-3 h-3" />
                           </span>

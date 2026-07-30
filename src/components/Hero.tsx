@@ -65,27 +65,28 @@ export default function Hero({ onChangePage }: HeroProps) {
   useEffect(() => {
     async function loadInterconnectedHeroContent() {
       try {
-        // 1. Fetch uploaded blog essay (matching Prajakta or latest approved)
+        // 1. Fetch Prajakta Potnis blog or latest blog submission
         const { data: allBlogs } = await supabase
           .from('blog_submissions')
           .select('title, image_url, content, category, short_description')
           .eq('status', 'approved')
           .order('published_at', { ascending: false });
 
-        const validBlogs = (allBlogs || []).filter(b => 
-          !b.title?.toLowerCase().includes('father-daughter') && 
-          !b.title?.toLowerCase().includes('fake history')
-        );
-        const prajaktaBlog = validBlogs.find(b => b.title?.toLowerCase().includes('prajakta')) || validBlogs[0];
+        const prajaktaBlog = (allBlogs || []).find(b => 
+          b.title?.toLowerCase().includes('prajakta') || 
+          b.title?.toLowerCase().includes('potnis')
+        ) || (allBlogs || [])[0];
         
         const extractFirstImage = (htmlContent: string) => {
-          const match = (htmlContent || '').match(/<img[^>]+src="([^">]+)"/);
+          if (!htmlContent) return null;
+          const match = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i);
           return match ? match[1] : null;
         };
 
+        const extractedImage = prajaktaBlog ? extractFirstImage(prajaktaBlog.content) : null;
         const blogMediaUrl = prajaktaBlog
-          ? (prajaktaBlog.image_url || extractFirstImage(prajaktaBlog.content) || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200')
-          : 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200';
+          ? (prajaktaBlog.image_url || extractedImage || '')
+          : '';
 
         const blogTitle = prajaktaBlog?.title || 'In Conversation with Prajakta Potnis';
         const blogSubtitle = prajaktaBlog?.short_description || 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.';
@@ -99,14 +100,17 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        // 3. Fetch Freedom - Season 3 exhibition event image
-        const { data: freedomEventData } = await supabase
+        // 3. Fetch latest active event
+        const { data: latestEventData } = await supabase
           .from('events')
           .select('title, featured_image_url, short_description, location')
-          .ilike('title', '%freedom%')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
-        const freedomMediaUrl = freedomEventData?.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200';
+        const eventMediaUrl = latestEventData?.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200';
+        const eventTitle = latestEventData?.title || 'Freedom - Season 3';
+        const eventSubtitle = latestEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
         // Check if custom slides were explicitly configured in Admin
         const localSaved = localStorage.getItem('tal_hero_cards');
@@ -150,10 +154,10 @@ export default function Hero({ onChangePage }: HeroProps) {
           {
             id: 'hero-event',
             media_type: 'image',
-            media_url: freedomMediaUrl,
-            badge: 'UPCOMING EXHIBITION // MUMBAI',
-            title: 'Freedom - Season 3',
-            subtitle: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
+            media_url: eventMediaUrl,
+            badge: 'EXHIBITION // FEATURED',
+            title: eventTitle,
+            subtitle: eventSubtitle,
             link_page: 'events',
             link_text: 'View Exhibition'
           }

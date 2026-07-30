@@ -631,9 +631,11 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           digital_pdf_price_usd: parseFloat(magDigitalPriceUsd) || 10.0,
           shipping_inr: parseFloat(magShippingInr) || 150.0,
           shipping_usd: parseFloat(magShippingUsd) || 15.0,
-          pdf_url: magPdfUrl,
           cover_image_url: magCoverUrl,
           preview_pages: [magPreviewPage1, magPreviewPage2, magPreviewPage3, magPreviewPage4, magPreviewPage5].filter(Boolean),
+          editor_note: magEditorNote,
+          editor_name: magEditorName,
+          editor_image_url: magEditorImageUrl,
           status: magStatus
         };
 
