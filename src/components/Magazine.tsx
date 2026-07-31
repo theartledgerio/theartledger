@@ -902,17 +902,28 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                 </div>
               </div>
 
-              {/* Center Stage: HD Interactive 2-Page Flipbook Spread & Digital Reader */}
-              <div className="relative w-full flex-1 my-2 lg:my-4 flex items-center justify-center pointer-events-auto overflow-hidden">
+              {/* Center Stage: Full Screen HD Digital Reader & Interactive 2-Page Flipbook Spread */}
+              <div className="relative w-full flex-1 my-1 flex items-center justify-center pointer-events-auto overflow-hidden">
                 {readerViewMode === 'pdf' && activeIssue.pdfUrl ? (
                   <div 
-                    className="w-full h-[88vh] max-w-[95vw] lg:max-w-7xl rounded-2xl overflow-hidden border border-white/20 shadow-[0_40px_140px_rgba(0,0,0,0.98)] bg-slate-950 relative select-none p-2 md:p-3"
+                    className="w-full h-[92vh] max-w-full rounded-2xl overflow-hidden border border-white/20 shadow-[0_50px_160px_rgba(0,0,0,1)] bg-slate-950 relative select-none p-1 md:p-2"
                     onContextMenu={(e) => e.preventDefault()}
                   >
-                    <div className="absolute top-4 right-6 z-20 bg-black/80 backdrop-blur-md text-[10px] font-mono text-turquoise px-3.5 py-1.5 rounded-full border border-turquoise/40 font-bold uppercase pointer-events-none tracking-widest shadow-xl flex items-center gap-2">
+                    {/* Floating Prominent Close Button on Fullscreen PDF */}
+                    <button
+                      onClick={() => setPreviewOpen(false)}
+                      className="absolute top-4 right-4 z-50 p-3 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-all duration-200 cursor-pointer border border-white/30 shadow-2xl backdrop-blur-lg hover:scale-110 flex items-center justify-center group"
+                      title="Exit Fullscreen Digital Reader"
+                    >
+                      <X className="w-6 h-6 stroke-[2.5]" />
+                    </button>
+
+                    {/* Security Badge */}
+                    <div className="absolute top-4 right-20 z-40 bg-black/80 backdrop-blur-md text-[10px] font-mono text-turquoise px-3.5 py-2 rounded-full border border-turquoise/40 font-bold uppercase pointer-events-none tracking-widest shadow-xl flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-turquoise animate-pulse" />
-                      🔒 Read-Only Digital Edition
+                      🔒 Read-Only Full PDF
                     </div>
+
                     <iframe
                       src={
                         activeIssue.pdfUrl.includes('drive.google.com')
@@ -921,7 +932,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                           ? `${activeIssue.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`
                           : `https://docs.google.com/viewer?url=${encodeURIComponent(activeIssue.pdfUrl)}&embedded=true`
                       }
-                      className="w-full h-full border-none rounded-xl bg-white"
+                      className="w-full h-full border-none rounded-xl bg-white shadow-2xl"
                       title={`${activeIssue.title} Digital Magazine PDF Reader`}
                     />
                   </div>

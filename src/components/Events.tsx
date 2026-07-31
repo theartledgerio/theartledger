@@ -36,7 +36,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           time: '12:00 PM - 7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
-          image: '/blog1/1.png',
+          image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
           status: 'Upcoming',
           description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
           type: 'Exhibition',
@@ -75,10 +75,19 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
             timelineStep: index + 1
           }));
 
-        // Ensure Freedom 3 is the single sole exhibition event
-        const freedomOnly = [freedomEvent];
+        // Merge dynamic database updates for Freedom Season 3 if edited via Admin Portal
+        const dbFreedom = realEventsFromDb.find(e => e.title.toLowerCase().includes('freedom'));
+        const activeFreedom = dbFreedom ? {
+          ...freedomEvent,
+          image: dbFreedom.image || freedomEvent.image,
+          subtitle: dbFreedom.subtitle || freedomEvent.subtitle,
+          description: dbFreedom.description || freedomEvent.description,
+          venue: dbFreedom.venue || freedomEvent.venue
+        } : freedomEvent;
+
+        const freedomOnly = [activeFreedom];
         setEvents(freedomOnly);
-        setActiveEvent(freedomEvent);
+        setActiveEvent(activeFreedom);
       } catch (err) {
         console.error('Error fetching events:', err);
       } finally {
@@ -536,36 +545,6 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                                 <p className="text-xs text-graycustom leading-relaxed">
                                   Founded by artist and advertising professional Siddharth Karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddharth combines creative and strategic expertise to guide artists in navigating today’s art landscape.
                                 </p>
-                              </div>
-                            </div>
-
-                            {/* Gallery Pics Grid */}
-                            <div className="space-y-3">
-                              <span className="text-[10px] font-mono text-midnight uppercase tracking-wider font-bold block">
-                                NEHRU CENTRE GALLERY & IMAGES
-                              </span>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="rounded-xl overflow-hidden border border-offwhite h-32 relative">
-                                  <img 
-                                    src={activeEvent.image} 
-                                    alt="Gallery Interior 1" 
-                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
-                                  />
-                                </div>
-                                <div className="rounded-xl overflow-hidden border border-offwhite h-32 relative">
-                                  <img 
-                                    src="https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=400" 
-                                    alt="Gallery Interior 2" 
-                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
-                                  />
-                                </div>
-                                <div className="rounded-xl overflow-hidden border border-offwhite h-32 relative">
-                                  <img 
-                                    src="https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&q=80&w=400" 
-                                    alt="Nehru Centre Building" 
-                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
-                                  />
-                                </div>
                               </div>
                             </div>
 

@@ -2081,6 +2081,52 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         />
                       </div>
                     </div>
+
+                    {/* EDITOR / CURATOR & ORGANISER PROFILE PICTURE SECTION */}
+                    <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-4">
+                      <div>
+                        <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold block mb-1">
+                          Editor-in-Chief & Curator / Organiser Profile
+                        </span>
+                        <p className="text-[11px] text-slate-500 font-sans">
+                          Update the editor note, curator name, and portrait picture.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor / Organiser Name</label>
+                          <input
+                            type="text"
+                            value={magEditorName}
+                            onChange={(e) => setMagEditorName(e.target.value)}
+                            placeholder="Siddharth Karmakar"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Editor's Note / Statement</label>
+                          <input
+                            type="text"
+                            value={magEditorNote}
+                            onChange={(e) => setMagEditorNote(e.target.value)}
+                            placeholder="A word from the curator..."
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* DRAG & DROP EDITOR / ORGANISER PORTRAIT IMAGE */}
+                      <DragDropFileZone
+                        label="Editor / Organiser Portrait Photo (Drag & Drop or Select File)"
+                        accept="image/*"
+                        value={magEditorImageUrl}
+                        onChange={(url) => setMagEditorImageUrl(url)}
+                        placeholder="Upload editor portrait photo or paste URL..."
+                        type="image"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -2277,21 +2323,15 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Featured Image (Direct URL or Google Drive Link)</label>
-                      <div className="flex gap-4 items-center">
-                        <input
-                          type="text"
-                          value={eventImage}
-                          onChange={(e) => setEventImage(e.target.value)}
-                          placeholder="https://images.unsplash.com/photo-..."
-                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                        {eventImage && eventImage.startsWith('http') && (
-                          <img src={eventImage} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
-                        )}
-                      </div>
-                    </div>
+                    {/* DRAG & DROP EVENT FEATURED IMAGE ZONE */}
+                    <DragDropFileZone
+                      label="Event Banner / Poster Image (Drag & Drop or Select File)"
+                      accept="image/*"
+                      value={eventImage}
+                      onChange={(url) => setEventImage(url)}
+                      placeholder="Upload poster image or paste direct URL..."
+                      type="image"
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Detailed Overview & Description</label>
