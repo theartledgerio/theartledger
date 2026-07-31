@@ -348,7 +348,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           time: '12:00 PM - 7:00 PM',
           location: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
-          featured_image_url: 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png',
+          featured_image_url: '/blog1/1.png',
           status: 'published',
           type: 'Exhibition'
         };
@@ -590,22 +590,30 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     if (!file) return;
 
     try {
-      triggerToast('Uploading PDF...');
+      triggerToast('Uploading Magazine PDF...');
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `magazine_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('blog-images')
-        .upload(filePath, file);
+      // Upload exclusively to dedicated magazine-pdfs bucket (fall back to blog-images if bucket doesn't exist yet)
+      let bucketName = 'magazine-pdfs';
+      let { error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
 
-      if (uploadError) {
+      if (uploadError && (uploadError.message?.includes('not found') || (uploadError as any).statusCode === '404')) {
+        bucketName = 'blog-images';
+        const { error: fbErr } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, { cacheControl: '3600', upsert: true });
+        if (fbErr) throw fbErr;
+      } else if (uploadError) {
         throw uploadError;
       }
 
-      const { data } = supabase.storage.from('blog-images').getPublicUrl(filePath);
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
       setMagPdfUrl(data.publicUrl);
-      triggerToast('PDF uploaded successfully!');
+      triggerToast('Magazine PDF uploaded successfully!');
     } catch (error: any) {
       triggerToast(`PDF Upload failed: ${error.message}`);
     }
@@ -639,66 +647,68 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           triggerToast('Blog post updated successfully!');
         }
       } else if (formType === 'magazine') {
+        // Core payload containing guaranteed database columns
         const payload: any = {
           issue_number: parseInt(magIssueNumber) || 1,
           issue_name: magIssueName || 'Untitled Issue',
           slug: magSlug || (magIssueName ? magIssueName.toLowerCase().replace(/ /g, '-') : `issue-${Date.now()}`),
           release_date: magReleaseDate || new Date().toISOString().split('T')[0],
           single_issue_price: parseFloat(magPrice) || 0.0,
-          single_issue_price_usd: parseFloat(magPriceUsd) || 0.0,
           digital_pdf_price: parseFloat(magDigitalPrice) || 299.0,
-          digital_pdf_price_usd: parseFloat(magDigitalPriceUsd) || 10.0,
-          shipping_inr: parseFloat(magShippingInr) || 150.0,
-          shipping_usd: parseFloat(magShippingUsd) || 15.0,
-          cover_image_url: magCoverUrl,
+          cover_image_url: magCoverUrl || '',
+          pdf_url: magPdfUrl || '',
           preview_pages: [magPreviewPage1, magPreviewPage2, magPreviewPage3, magPreviewPage4, magPreviewPage5, magPreviewPage6].filter(Boolean),
-          editor_note: magEditorNote,
-          editor_name: magEditorName,
-          editor_image_url: magEditorImageUrl,
-          status: magStatus
+          status: magStatus || 'published'
         };
 
+        // Attach editorial metadata fields if set
+        if (magTagline) payload.tagline = magTagline;
+        if (magShortSummary) payload.short_summary = magShortSummary;
+        if (magLongDescription) payload.long_description = magLongDescription;
+        if (magEditorNote) payload.editor_note = magEditorNote;
+        if (magEditorName) payload.editor_name = magEditorName;
+        if (magEditorImageUrl) payload.editor_image_url = magEditorImageUrl;
+
         if (formMode === 'create') {
-          let { error } = await supabase.from('magazines').insert([payload]);
-          if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
-            const fallbackPayload = {
+          const { error } = await supabase.from('magazines').insert([payload]);
+          if (error) {
+            // If optional columns cause issue, send clean core payload
+            const corePayload = {
               issue_number: payload.issue_number,
               issue_name: payload.issue_name,
               slug: payload.slug,
               release_date: payload.release_date,
               single_issue_price: payload.single_issue_price,
               digital_pdf_price: payload.digital_pdf_price,
-              pdf_url: payload.pdf_url,
               cover_image_url: payload.cover_image_url,
+              pdf_url: payload.pdf_url,
+              preview_pages: payload.preview_pages,
               status: payload.status
             };
-            const { error: fbErr } = await supabase.from('magazines').insert([fallbackPayload]);
-            if (fbErr) throw fbErr;
-          } else if (error) {
-            throw error;
+            const { error: coreErr } = await supabase.from('magazines').insert([corePayload]);
+            if (coreErr) throw coreErr;
           }
-          triggerToast('Magazine edition added successfully!');
         } else {
-          let { error } = await supabase.from('magazines').update(payload).eq('id', editingId);
-          if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
-            const fallbackPayload = {
+          const { error } = await supabase.from('magazines').update(payload).eq('id', editingId);
+          if (error) {
+            const corePayload = {
               issue_number: payload.issue_number,
               issue_name: payload.issue_name,
               slug: payload.slug,
               release_date: payload.release_date,
               single_issue_price: payload.single_issue_price,
               digital_pdf_price: payload.digital_pdf_price,
-              pdf_url: payload.pdf_url,
               cover_image_url: payload.cover_image_url,
+              pdf_url: payload.pdf_url,
+              preview_pages: payload.preview_pages,
               status: payload.status
             };
-            const { error: fbErr } = await supabase.from('magazines').update(fallbackPayload).eq('id', editingId);
-            if (fbErr) throw fbErr;
-          } else if (error) {
-            throw error;
+            const { error: coreErr } = await supabase.from('magazines').update(corePayload).eq('id', editingId);
+            if (coreErr) throw coreErr;
           }
-          triggerToast('Magazine edition updated successfully!');
         }
+
+        triggerToast(formMode === 'create' ? 'Magazine edition added successfully!' : 'Magazine edition updated successfully!');
       } else if (formType === 'artist') {
         const payload = {
           name: artName,
@@ -1580,10 +1590,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           <td className="p-4 font-mono font-bold text-emerald-700">
                             {pay.currency === 'USD' ? `$${pay.amount}` : `₹${pay.amount}`}
                           </td>
-                          <td className="p-4 text-slate-600 max-w-xs space-y-0.5">
-                            <p className="font-medium text-midnight truncate">{pay.address || 'N/A'}</p>
-                            <p className="text-[10px] font-mono text-slate-500">
-                              {[pay.city, pay.pincode, pay.country].filter(Boolean).join(', ')}
+                          <td className="p-4 text-slate-700 max-w-sm space-y-1">
+                            <p className="font-sans font-semibold text-midnight leading-snug whitespace-pre-wrap">{pay.address || pay.shipping_address || 'No street address provided'}</p>
+                            <p className="text-[11px] font-mono text-slate-600 font-medium">
+                              {[pay.house_no, pay.city, pay.pincode, pay.country].filter(Boolean).join(', ')}
                             </p>
                           </td>
                           <td className="p-4">

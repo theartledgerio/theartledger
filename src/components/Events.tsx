@@ -36,7 +36,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           time: '12:00 PM - 7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
-          image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
+          image: '/blog1/1.png',
           status: 'Upcoming',
           description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
           type: 'Exhibition',
@@ -68,7 +68,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
             time: '12:00 PM - 7:00 PM',
             venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
             artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
-            image: item.featured_image_url || 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
+            image: item.featured_image_url || '',
             status: item.status === 'completed' ? 'Completed' : item.status === 'published' ? 'Current' : 'Upcoming',
             description: item.long_description || item.short_description || '',
             type: 'Exhibition',
@@ -158,14 +158,16 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                     className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
                   >
                     {/* Visual Media Container */}
-                    <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
-                      <img 
-                        src={event.image} 
-                        alt={event.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                    {event.image && (
+                      <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
+                        <img 
+                          src={event.image} 
+                          alt={event.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    )}
 
                     {/* Meta info */}
                     <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
@@ -460,17 +462,19 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                   >
                     <div className="space-y-8">
                       {/* Event Photo Cover */}
-                      <div className="h-[280px] sm:h-[380px] w-full rounded-2xl overflow-hidden relative shadow-md group">
-                        <div className="absolute top-4 left-4 z-10 px-4 py-2 bg-midnight/95 backdrop-blur-sm text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold">
-                          {activeEvent.status} SHOWING
+                      {activeEvent.image && (
+                        <div className="h-[280px] sm:h-[380px] w-full rounded-2xl overflow-hidden relative shadow-md group">
+                          <div className="absolute top-4 left-4 z-10 px-4 py-2 bg-midnight/95 backdrop-blur-sm text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold">
+                            {activeEvent.status} SHOWING
+                          </div>
+                          <img
+                            src={activeEvent.image}
+                            alt={activeEvent.title}
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
-                        <img
-                          src={activeEvent.image}
-                          alt={activeEvent.title}
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
+                      )}
 
                       {/* Metadata line */}
                       <div className="flex items-center gap-2 text-xs font-mono text-midnight font-bold uppercase tracking-widest">

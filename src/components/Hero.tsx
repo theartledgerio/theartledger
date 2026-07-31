@@ -47,7 +47,7 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-event',
     media_type: 'image',
-    media_url: 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png',
+    media_url: '/blog1/1.png',
     badge: 'UPCOMING EXHIBITION // MUMBAI',
     title: 'Freedom - Season 3',
     subtitle: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
@@ -118,7 +118,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        const eventMediaUrl = freedomEventData?.featured_image_url || 'https://psbfhomirpzlkinuttea.supabase.co/storage/v1/object/public/blog-images/assets/hero_freedom_exhibition_real_1785413701462.png';
+        const eventMediaUrl = freedomEventData?.featured_image_url || '/blog1/1.png';
         const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
         const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
