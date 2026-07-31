@@ -4,5 +4,29 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment & Credentials
+.env
+.env.*
 !.env.example
+*.pem
+*.key
+credentials.json
+
+# Scratch, DB backups, & standalone helper scripts
+scratch/
+bucket/
+*.ts
+!src/**/*.ts
+!frontend/src/**/*.ts
+!frontend/.aistudio/src/**/*.ts
+
+# Public uploads & asset files
+public/
+public/*
+
+# System & IDE files
+.vscode/
+.idea/
+*.swp
+*.bak
