@@ -514,12 +514,12 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
                   className="group relative rounded-[32px] overflow-hidden bg-warmwhite border-[0.5px] border-[#EAE5D8]/30 hover:border-turquoise/30 shadow-xl hover:shadow-2xl transition-all duration-500 grid grid-cols-1 md:grid-cols-12 items-stretch cursor-pointer"
                 >
                   {/* Left Column: Photo cover (Image on Left) */}
-                  <div className="md:col-span-5 overflow-hidden relative min-h-[300px] md:min-h-[380px]">
+                  <div className="md:col-span-5 overflow-hidden relative min-h-[300px] md:min-h-[380px] bg-slate-100 flex items-center justify-center p-3">
                     <img
                       src={blog.image}
                       alt={blog.title}
                       loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
+                      className="w-full h-full object-cover rounded-2xl group-hover:scale-103 transition-transform duration-700 ease-out shadow-sm"
                       referrerPolicy="no-referrer"
                     />
                     {/* Subtle paper luster overlay */}

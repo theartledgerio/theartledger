@@ -830,200 +830,123 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         </div>
       )}
 
-      {/* FLIPBOOK PREVIEW MODAL - CLEAN FLOATING ARTWORK MODE */}
+      {/* FULLSCREEN DIGITAL MAGAZINE READER OVERLAY */}
       <AnimatePresence>
         {previewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-0 lg:p-8">
-            {/* Soft Dark Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPreviewOpen(false)}
-              className="fixed inset-0 bg-black/90 backdrop-blur-xl z-0"
-            />
-
-            {/* Main Stage Wrapper (Transparent background, no grey boxes) */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 140 }}
-              className="relative w-full h-full max-w-6xl z-10 flex flex-col justify-between items-center pointer-events-none"
-            >
-              {/* Top Header with Mode Switcher (5-Page Flipbook Spreads vs Full Digital PDF) */}
-              <div className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-2 pointer-events-auto z-30">
-                {/* Left: Issue Meta */}
-                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-                  <div className="w-2 h-2 rounded-full bg-turquoise animate-pulse" />
-                  <span className="text-xs font-serif font-bold text-white tracking-wide">
-                    {activeIssue.issueNumber}: {activeIssue.title}
-                  </span>
-                </div>
-
-                {/* Center: View Switcher (5-Page Preview Spreads vs Full PDF Document) */}
-                <div className="flex items-center p-1 bg-black/50 backdrop-blur-md rounded-full border border-white/15">
-                  <button
-                    onClick={() => setReaderViewMode('spread')}
-                    className={`px-4 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      readerViewMode === 'spread' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    5-Page Preview Spreads
-                  </button>
-
-                  {activeIssue.pdfUrl && (isAdminUser || purchasedMagIds.includes(activeIssue.id)) && (
-                    <button
-                      onClick={() => setReaderViewMode('pdf')}
-                      className={`px-4 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                        readerViewMode === 'pdf' ? 'bg-turquoise text-midnight shadow-md' : 'text-white/70 hover:text-white'
-                      }`}
-                    >
-                      Full Digital PDF
-                    </button>
-                  )}
-                </div>
-
-                {/* Right Controls: Page Count & Close */}
-                <div className="flex items-center gap-3 pointer-events-auto">
-                  {readerViewMode === 'spread' && (
-                    <span className="text-[11px] font-mono text-white/80 font-bold bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-                      {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
-                    </span>
-                  )}
-
-                  <button
-                    onClick={() => setPreviewOpen(false)}
-                    className="p-2.5 rounded-full bg-white/10 hover:bg-turquoise text-white hover:text-midnight transition-all duration-200 cursor-pointer border border-white/20 shadow-xl backdrop-blur-md hover:scale-110 flex items-center justify-center"
-                    title="Close Reader"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-2xl w-screen h-screen overflow-hidden select-none">
+            {/* Minimal Floating Top Controls (Close Button & Issue Badge) */}
+            <div className="absolute top-4 left-6 z-50 flex items-center gap-3 pointer-events-auto">
+              <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/15 shadow-xl">
+                <span className="w-2 h-2 rounded-full bg-turquoise animate-pulse" />
+                <span className="text-xs font-serif font-bold text-white tracking-wide">
+                  {activeIssue.issueNumber}: {activeIssue.title}
+                </span>
               </div>
+            </div>
 
-              {/* Center Stage: Full Screen HD Digital Reader & Interactive 2-Page Flipbook Spread */}
-              <div className="relative w-full flex-1 my-1 flex items-center justify-center pointer-events-auto overflow-hidden">
-                {readerViewMode === 'pdf' && activeIssue.pdfUrl ? (
-                  <div 
-                    className="w-full h-[92vh] max-w-full rounded-2xl overflow-hidden border border-white/20 shadow-[0_50px_160px_rgba(0,0,0,1)] bg-slate-950 relative select-none p-1 md:p-2"
-                    onContextMenu={(e) => e.preventDefault()}
-                  >
-                    {/* Floating Prominent Close Button on Fullscreen PDF */}
+            <div className="absolute top-4 right-6 z-50 flex items-center gap-3 pointer-events-auto">
+              <span className="text-[11px] font-mono text-white/80 font-bold bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/15 shadow-xl">
+                {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
+              </span>
+
+              <button
+                onClick={() => setPreviewOpen(false)}
+                className="p-3 rounded-full bg-midnight/90 hover:bg-turquoise text-white hover:text-midnight transition-all duration-200 cursor-pointer border border-white/20 shadow-2xl backdrop-blur-md hover:scale-110 flex items-center justify-center"
+                title="Close Reader"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Pure 100vw x 100vh Fullscreen Stage */}
+            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-8">
+              {readerViewMode === 'pdf' && activeIssue.pdfUrl ? (
+                <div 
+                  className="w-full h-full relative select-none rounded-2xl overflow-hidden shadow-2xl bg-white"
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <iframe
+                    src={
+                      activeIssue.pdfUrl.includes('drive.google.com')
+                        ? activeIssue.pdfUrl.replace(/\/view.*$/, '/preview')
+                        : activeIssue.pdfUrl.endsWith('.pdf') || activeIssue.pdfUrl.includes('.pdf?')
+                        ? `${activeIssue.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`
+                        : `https://docs.google.com/viewer?url=${encodeURIComponent(activeIssue.pdfUrl)}&embedded=true`
+                    }
+                    className="w-full h-full border-none bg-white"
+                    title={`${activeIssue.title} Digital Magazine Reader`}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Previous Page Floating Button */}
+                  {currentPageIndex > 0 && (
                     <button
-                      onClick={() => setPreviewOpen(false)}
-                      className="absolute top-4 right-4 z-50 p-3 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-all duration-200 cursor-pointer border border-white/30 shadow-2xl backdrop-blur-lg hover:scale-110 flex items-center justify-center group"
-                      title="Exit Fullscreen Digital Reader"
+                      onClick={() => { setCurrentPageIndex(prev => Math.max(0, prev - (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                      className="absolute left-3 md:left-8 z-40 p-4 rounded-full bg-black/60 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
                     >
-                      <X className="w-6 h-6 stroke-[2.5]" />
+                      <ChevronLeft className="w-7 h-7" />
                     </button>
+                  )}
 
-                    {/* Security Badge */}
-                    <div className="absolute top-4 right-20 z-40 bg-black/80 backdrop-blur-md text-[10px] font-mono text-turquoise px-3.5 py-2 rounded-full border border-turquoise/40 font-bold uppercase pointer-events-none tracking-widest shadow-xl flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-turquoise animate-pulse" />
-                      🔒 Read-Only Full PDF
-                    </div>
-
-                    <iframe
-                      src={
-                        activeIssue.pdfUrl.includes('drive.google.com')
-                          ? activeIssue.pdfUrl.replace(/\/view.*$/, '/preview')
-                          : activeIssue.pdfUrl.endsWith('.pdf') || activeIssue.pdfUrl.includes('.pdf?')
-                          ? `${activeIssue.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`
-                          : `https://docs.google.com/viewer?url=${encodeURIComponent(activeIssue.pdfUrl)}&embedded=true`
-                      }
-                      className="w-full h-full border-none rounded-xl bg-white shadow-2xl"
-                      title={`${activeIssue.title} Digital Magazine PDF Reader`}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    {/* Previous Page Floating Button */}
-                    {currentPageIndex > 0 && (
-                      <button
-                        onClick={() => { setCurrentPageIndex(prev => Math.max(0, prev - (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
-                        className="absolute left-2 md:left-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
+                  {/* High-Definition 2-Page Desktop / 1-Page Mobile Fullscreen Spread Container */}
+                  <div className="relative w-full h-[92vh] max-w-full flex items-center justify-center shadow-[0_40px_140px_rgba(0,0,0,0.98)] rounded-2xl overflow-hidden bg-transparent p-2 md:p-4">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={`spread-${currentPageIndex}`}
+                        initial={{ opacity: 0, scale: 0.985 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.985 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="w-full h-full flex items-center justify-center gap-3 md:gap-6 bg-transparent max-h-[88vh]"
                       >
-                        <ChevronLeft className="w-6 h-6" />
-                      </button>
-                    )}
+                        {/* Left Page (Desktop Spread Left / Mobile Single Page) */}
+                        <div className={`${isMobileReader ? 'w-full h-full' : 'w-1/2 h-full'} relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80`}>
+                          <img
+                            src={activeIssue.pages[currentPageIndex]}
+                            alt="Magazine left page"
+                            className="w-full h-full object-contain rounded-[4px] pointer-events-auto select-none shadow-sm"
+                            onContextMenu={(e) => e.preventDefault()}
+                            onDragStart={(e) => e.preventDefault()}
+                            referrerPolicy="no-referrer"
+                          />
+                          {!isMobileReader && (
+                            /* Realistic spine shadow gradient */
+                            <div className="absolute inset-y-0 right-0 w-8 md:w-16 bg-gradient-to-l from-black/25 via-black/8 to-transparent pointer-events-none rounded-r-xl" />
+                          )}
+                        </div>
 
-                    {/* High-Definition ISO A-Series (A4/A5 Aspect Ratio 1.414:1) Magazine Spread Container */}
-                    <div className="relative w-full h-[88vh] max-w-[95vw] lg:max-w-7xl flex items-center justify-center shadow-[0_40px_140px_rgba(0,0,0,0.98)] rounded-2xl overflow-hidden border border-white/20 bg-slate-950 p-2 md:p-4">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={`spread-${currentPageIndex}`}
-                          initial={{ opacity: 0, scale: 0.985 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.985 }}
-                          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                          className="w-full h-full flex items-center justify-center gap-2 md:gap-4 bg-transparent max-h-[82vh]"
-                        >
-                          {/* Left A5/A4 Page (~0.5cm / 6px white margin frame, exact 1:1.414 portrait aspect) */}
-                          <div className={`${isMobileReader ? 'w-full h-full' : 'w-1/2 h-full'} relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80`}>
+                        {/* Right Page (Desktop Spread Right - 2 Page View) */}
+                        {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
+                          <div className="w-1/2 h-full relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80">
                             <img
-                              src={activeIssue.pages[currentPageIndex]}
-                              alt="Magazine left page"
+                              src={activeIssue.pages[currentPageIndex + 1]}
+                              alt="Magazine right page"
                               className="w-full h-full object-contain rounded-[4px] pointer-events-auto select-none shadow-sm"
                               onContextMenu={(e) => e.preventDefault()}
                               onDragStart={(e) => e.preventDefault()}
                               referrerPolicy="no-referrer"
                             />
-                            {!isMobileReader && (
-                              /* Realistic spine shadow gradient */
-                              <div className="absolute inset-y-0 right-0 w-8 md:w-16 bg-gradient-to-l from-black/25 via-black/8 to-transparent pointer-events-none rounded-r-xl" />
-                            )}
+                            {/* Realistic spine shadow gradient */}
+                            <div className="absolute inset-y-0 left-0 w-8 md:w-16 bg-gradient-to-r from-black/25 via-black/8 to-transparent pointer-events-none rounded-l-xl" />
                           </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
 
-                          {/* Right A5/A4 Page (~0.5cm / 6px white margin frame, exact 1:1.414 portrait aspect) */}
-                          {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
-                            <div className="w-1/2 h-full relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80">
-                              <img
-                                src={activeIssue.pages[currentPageIndex + 1]}
-                                alt="Magazine right page"
-                                className="w-full h-full object-contain rounded-[4px] pointer-events-auto select-none shadow-sm"
-                                onContextMenu={(e) => e.preventDefault()}
-                                onDragStart={(e) => e.preventDefault()}
-                                referrerPolicy="no-referrer"
-                              />
-                              {/* Realistic spine shadow gradient */}
-                              <div className="absolute inset-y-0 left-0 w-8 md:w-16 bg-gradient-to-r from-black/25 via-black/8 to-transparent pointer-events-none rounded-l-xl" />
-                            </div>
-                          )}
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Next Page Floating Button */}
-                    {currentPageIndex + (isMobileReader ? 1 : 2) < activeIssue.pages.length && (
-                      <button
-                        onClick={() => { setCurrentPageIndex(prev => Math.min(activeIssue.pages.length - 1, prev + (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
-                        className="absolute right-2 md:right-6 z-40 p-4 rounded-full bg-black/50 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
-                      >
-                        <ChevronRight className="w-6 h-6" />
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Page Indicator Dots at Bottom */}
-              {readerViewMode === 'spread' && (
-                <div className="flex items-center gap-2 pointer-events-auto bg-black/40 backdrop-blur-md px-5 py-2 rounded-full border border-white/10">
-                  {Array.from({ length: isMobileReader ? activeIssue.pages.length : Math.ceil(activeIssue.pages.length / 2) }).map((_, idx) => {
-                    const targetIndex = isMobileReader ? idx : idx * 2;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => { setCurrentPageIndex(targetIndex); setAutoFlip(false); }}
-                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${currentPageIndex === targetIndex ? 'w-6 bg-turquoise' : 'w-2 bg-white/30 hover:bg-white/60'}`}
-                        title={isMobileReader ? `Page ${idx + 1}` : `Spread ${idx + 1}`}
-                      />
-                    );
-                  })}
-                </div>
+                  {/* Next Page Floating Button */}
+                  {currentPageIndex + (isMobileReader ? 1 : 2) < activeIssue.pages.length && (
+                    <button
+                      onClick={() => { setCurrentPageIndex(prev => Math.min(activeIssue.pages.length - 1, prev + (isMobileReader ? 1 : 2))); setAutoFlip(false); }}
+                      className="absolute right-3 md:right-8 z-40 p-4 rounded-full bg-black/60 hover:bg-turquoise text-white hover:text-midnight transition-all cursor-pointer flex items-center justify-center hover:scale-110 border border-white/20 shadow-2xl backdrop-blur-md"
+                    >
+                      <ChevronRight className="w-7 h-7" />
+                    </button>
+                  )}
+                </>
               )}
-            </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>
