@@ -50,17 +50,33 @@ const DragDropFileZone: React.FC<{
     
     try {
       setIsUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || 'file';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const bucketName = 'blog-images';
       
       const { error } = await supabase.storage.from(bucketName).upload(fileName, file);
-      if (error) throw error;
-      
-      const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-      onChange(data.publicUrl);
+      if (!error) {
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+        onChange(data.publicUrl);
+      } else {
+        // Fallback: Read file directly into Data URL (Base64) for instant direct file upload without external URL dependencies
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            onChange(event.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     } catch (e: any) {
-      alert(`Upload failed: ${e.message}`);
+      // Local fallback for offline/direct upload
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          onChange(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploading(false);
     }
@@ -160,6 +176,30 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [paymentsList, setPaymentsList] = useState<any[]>([]);
   const [eventsList, setEventsList] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+
+  // Completed Payment Notification Tracking
+  const [seenPaymentIds, setSeenPaymentIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('tal_seen_payment_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const completedPayments = paymentsList.filter(p => 
+    p.status === 'paid' || p.status === 'completed' || p.status === 'captured'
+  );
+  const unreadCompletedPayments = completedPayments.filter(p => !seenPaymentIds.includes(p.id));
+  const unreadOrdersCount = unreadCompletedPayments.length;
+
+  const markPaymentsAsRead = () => {
+    const allCompletedIds = completedPayments.map(p => p.id);
+    setSeenPaymentIds(allCompletedIds);
+    try {
+      localStorage.setItem('tal_seen_payment_ids', JSON.stringify(allCompletedIds));
+    } catch (e) {}
+  };
 
   // CRUD Form Overlay states
   const [showFormModal, setShowFormModal] = useState(false);
@@ -1090,13 +1130,20 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
             {portalRole === 'admin' && (
               <button
-                onClick={() => setActiveTab('payments')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                onClick={() => { setActiveTab('payments'); markPaymentsAsRead(); }}
+                className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   activeTab === 'payments' ? 'bg-midnight text-white shadow-md shadow-midnight/15' : 'text-slate-600 hover:bg-[#EAE5D8]/50 hover:text-midnight'
                 }`}
               >
-                <CreditCard className="w-4 h-4" />
-                <span>Payment Dashboard</span>
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Payment Dashboard</span>
+                </div>
+                {unreadOrdersCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-mono font-bold animate-pulse shadow-sm">
+                    {unreadOrdersCount} NEW
+                  </span>
+                )}
               </button>
             )}
           </nav>
@@ -1133,6 +1180,40 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                 <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Dashboard Summary</h1>
               </div>
             </div>
+
+            {/* New Completed Payment Orders Alert Banner */}
+            {unreadOrdersCount > 0 && (
+              <div className="p-5 rounded-2xl bg-[#1E3A8A] text-white border border-blue-400/40 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-full bg-blue-400/20 text-blue-300 flex items-center justify-center shrink-0 border border-blue-400/30 animate-pulse">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-blue-300 flex items-center gap-2">
+                      <span>{unreadOrdersCount} NEW COMPLETED ORDER{unreadOrdersCount > 1 ? 'S' : ''} PAID</span>
+                    </h4>
+                    <p className="text-xs text-slate-200 mt-0.5 font-medium leading-relaxed">
+                      Latest: <strong>{unreadCompletedPayments[0]?.name || 'Collector'}</strong> paid {unreadCompletedPayments[0]?.amount ? `₹${unreadCompletedPayments[0]?.amount}` : ''} ({unreadCompletedPayments[0]?.plan || 'order'}) on {unreadCompletedPayments[0]?.created_at ? new Date(unreadCompletedPayments[0]?.created_at).toLocaleDateString() : 'today'}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <button
+                    onClick={() => { setActiveTab('payments'); markPaymentsAsRead(); }}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white text-[10px] font-sans font-bold uppercase tracking-widest rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap"
+                  >
+                    View & Confirm Orders
+                  </button>
+                  <button
+                    onClick={markPaymentsAsRead}
+                    className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-sans font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Quick stats grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1475,6 +1556,42 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                 <span>CREATE EVENT</span>
               </button>
             </div>
+
+            {/* AUTOMATIC EXPIRATION POPUP & ACTION BANNER FOR PAST EVENTS */}
+            {(() => {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const expiredEvents = eventsList.filter(e => (e.event_date || e.date) && (e.event_date || e.date) < todayStr && e.status !== 'completed');
+
+              if (expiredEvents.length === 0) return null;
+
+              return (
+                <div className="p-6 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-500 text-white rounded-xl shadow-md">
+                        <AlertTriangle className="w-5 h-5 animate-pulse" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-serif font-bold text-amber-950">
+                          Exhibition Date Ended ({expiredEvents.length} Pending Archive)
+                        </h4>
+                        <p className="text-xs text-amber-900 font-sans mt-0.5">
+                          The date for <span className="font-bold">"{expiredEvents[0].title}"</span> has passed. Upload post-exhibition photos/recap images and archive to Previous Events.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => openForm('event', 'edit', expiredEvents[0])}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 shadow-md flex items-center gap-2"
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      <span>Upload Pics & Archive</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Events table */}
             <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">

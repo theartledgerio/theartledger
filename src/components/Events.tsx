@@ -32,12 +32,12 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           id: 'freedom-season-3',
           title: 'Freedom - Season 3',
           subtitle: 'International Art Exhibition & Award Event',
-          date: '2026-08-11',
+          date: '2026-08-26',
           time: '12:00 PM - 7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
           image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
-          status: 'Upcoming',
+          status: 'Completed',
           description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
           type: 'Exhibition',
           timelineStep: 1
@@ -55,25 +55,33 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
 
         const { data } = await supabase.from('events').select('*').order('event_date', { ascending: true });
 
+        const todayStr = new Date().toISOString().split('T')[0];
+
         const realEventsFromDb: Event[] = (data || [])
           .filter(item => {
             const titleLower = (item.title || '').toLowerCase();
             return !DUMMY_TITLES.some(d => titleLower.includes(d));
           })
-          .map((item, index) => ({
-            id: item.id,
-            title: item.title,
-            subtitle: item.short_description || 'Curated Exhibition',
-            date: item.event_date || '2026-08-11',
-            time: '12:00 PM - 7:00 PM',
-            venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
-            artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
-            image: item.featured_image_url || '',
-            status: item.status === 'completed' ? 'Completed' : item.status === 'published' ? 'Current' : 'Upcoming',
-            description: item.long_description || item.short_description || '',
-            type: 'Exhibition',
-            timelineStep: index + 1
-          }));
+          .map((item, index) => {
+            const eventDateStr = item.event_date || item.date || '2026-08-26';
+            const isPast = eventDateStr <= todayStr;
+            const computedStatus = (item.status === 'completed' || isPast) ? 'Completed' : (item.status === 'published' ? 'Current' : 'Upcoming');
+
+            return {
+              id: item.id,
+              title: item.title,
+              subtitle: item.short_description || 'Curated Exhibition',
+              date: eventDateStr,
+              time: item.time || '12:00 PM - 7:00 PM',
+              venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
+              artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
+              image: item.featured_image_url || '',
+              status: computedStatus,
+              description: item.long_description || item.short_description || '',
+              type: 'Exhibition',
+              timelineStep: index + 1
+            };
+          });
 
         // Merge dynamic database updates for Freedom Season 3 if edited via Admin Portal
         const dbFreedom = realEventsFromDb.find(e => e.title.toLowerCase().includes('freedom'));
@@ -82,11 +90,13 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           image: dbFreedom.image || freedomEvent.image,
           subtitle: dbFreedom.subtitle || freedomEvent.subtitle,
           description: dbFreedom.description || freedomEvent.description,
-          venue: dbFreedom.venue || freedomEvent.venue
+          venue: dbFreedom.venue || freedomEvent.venue,
+          status: 'Completed' as const
         } : freedomEvent;
 
-        const freedomOnly = [activeFreedom];
-        setEvents(freedomOnly);
+        // Combine all active and archived exhibitions
+        const allExhibitions = [activeFreedom, ...realEventsFromDb.filter(e => e.id !== activeFreedom.id)];
+        setEvents(allExhibitions);
         setActiveEvent(activeFreedom);
       } catch (err) {
         console.error('Error fetching events:', err);
@@ -223,10 +233,10 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                   <div 
                     key={event.id}
                     onClick={() => onChangePage?.('events')}
-                    className="group bg-white/10 hover:bg-white/40 border border-offwhite/30 hover:border-offwhite/70 rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 opacity-75 hover:opacity-100 cursor-pointer"
+                    className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
                   >
-                    {/* Gray scale / Desaturated Media Container */}
-                    <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0 filter grayscale">
+                    {/* Full Color Media Container */}
+                    <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
                       <img 
                         src={event.image} 
                         alt={event.title} 

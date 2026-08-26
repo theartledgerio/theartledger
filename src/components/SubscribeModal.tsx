@@ -27,7 +27,7 @@ interface SubscribeModalProps {
 
 export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps) {
   const { formatPrice, currency, addressData } = useCurrency();
-  const [selectedPlan, setSelectedPlan] = useState<'1_year'>('1_year');
+  const [selectedPlan, setSelectedPlan] = useState<'single_issue' | '1_year'>('1_year');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [memberId, setMemberId] = useState('');
@@ -51,12 +51,27 @@ export default function SubscribeModal({ isOpen, onClose }: SubscribeModalProps)
 
   const plans = [
     {
+      id: 'single_issue' as const,
+      name: 'Single Edition Buy',
+      priceInINR: 499,
+      period: 'single copy',
+      desc: 'Purchase the latest quarterly print release delivered directly to your doorstep.',
+      perks: ['Current Printed Quarterly Issue', 'Full Digital PDF Access', 'Doorstep Shipping'],
+      featured: false
+    },
+    {
       id: '1_year' as const,
-      name: '1 Year Subscription',
-      priceInINR: 30000,
-      period: 'subscription',
-      desc: 'Our premium offering. Receive curated print publications delivered directly to your doorstep for an entire year.',
-      perks: ['All Printed Journal Issues', 'Full Digital Ledger Access', 'Guaranteed VIP opening night tickets', 'Early acquisition catalogs'],
+      name: 'Annual Patron Subscription',
+      priceInINR: 1800,
+      period: '4 quarterly issues / yr',
+      desc: 'Receive all 4 quarterly print releases delivered to your door with early access, VIP event invitations, and full archive keys.',
+      perks: [
+        'All 4 Quarterly Print Editions Delivered',
+        'Early Collector Access (Dispatched 2 Weeks Early)',
+        'Full Digital Archive & PDF Access',
+        'VIP Invitations to TAL Openings',
+        'Early Acquisition Catalogs'
+      ],
       featured: true
     }
   ];

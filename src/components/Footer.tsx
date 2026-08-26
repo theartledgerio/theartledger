@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowUp, Instagram, Twitter, Linkedin, Youtube, ExternalLink, Globe, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowUp, Instagram, Linkedin, ExternalLink, Globe, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import Logo from './Logo';
 
 interface FooterProps {
@@ -30,10 +30,34 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
   };
 
   const socialLinks = [
-    { name: 'Instagram', icon: <Instagram className="w-4 h-4" />, href: 'https://www.instagram.com/artledgermagazine?igsh=N3dmaTF3NWg0dHEw&utm_source=qr' },
-    { name: 'LinkedIn', icon: <Linkedin className="w-4 h-4" />, href: 'https://www.linkedin.com/company/art-ledger-media-private-limited/' },
-    { name: 'Twitter (Coming Soon)', icon: <Twitter className="w-4 h-4" />, href: '#' },
-    { name: 'YouTube (Coming Soon)', icon: <Youtube className="w-4 h-4" />, href: '#' }
+    {
+      name: 'Instagram',
+      icon: <Instagram className="w-4 h-4" />,
+      href: 'https://www.instagram.com/artledgermagazine?igsh=N3dmaTF3NWg0dHEw&utm_source=qr'
+    },
+    {
+      name: 'LinkedIn',
+      icon: <Linkedin className="w-4 h-4" />,
+      href: 'https://www.linkedin.com/company/art-ledger-media-private-limited/'
+    },
+    {
+      name: 'Spotify',
+      icon: (
+        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <path d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.521 17.341c-.218.359-.696.475-1.055.257-2.887-1.764-6.521-2.163-10.803-1.185-.407.093-.815-.162-.908-.569-.093-.407.162-.815.569-.908 4.686-1.07 8.704-.616 11.94 1.36.359.218.475.696.257 1.045zm1.479-3.284c-.275.448-.865.592-1.313.317-3.303-2.03-8.337-2.617-12.245-1.428-.504.153-1.037-.133-1.19-.637-.153-.504.133-1.037.637-1.19 4.464-1.355 10.021-.706 13.794 1.614.448.275.592.865.317 1.324zm.126-3.418C15.228 8.441 8.8 8.23 5.127 9.344c-.611.185-1.258-.166-1.443-.777-.185-.611.166-1.258.777-1.443 4.225-1.283 11.314-1.04 15.688 1.554.551.327.733 1.038.406 1.589-.327.551-1.038.733-1.589.406z" />
+        </svg>
+      ),
+      href: 'https://open.spotify.com/episode/50RuyQVnrOZva8StVNe2MJ?si=tJ9TYK0lSaCkIGgvhJ36QQ'
+    },
+    {
+      name: 'YouTube',
+      icon: (
+        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+        </svg>
+      ),
+      href: 'https://youtube.com/@theartledger?si=bO4BFX59aA6XMLgq'
+    }
   ];
 
   return (
@@ -72,7 +96,7 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
               </button>
 
               <p className="text-xs md:text-sm text-slate-600 leading-relaxed max-w-sm">
-                The Art Ledger (TAL) is an independent monthly journal from India documenting contemporary fine art, curatorial practices, and creative frontiers with global aesthetic precision.
+                The Art Ledger (TAL) is an independent quarterly journal from India documenting contemporary fine art, curatorial practices, and creative frontiers with global aesthetic precision.
               </p>
 
               {/* Social Channels (Circular Badges) */}
@@ -81,6 +105,8 @@ export default function Footer({ onChangePage, onOpenSubscribeModal }: FooterPro
                   <a
                     key={link.name}
                     href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="p-2.5 rounded-full border border-slate-200 hover:border-midnight hover:bg-midnight text-slate-600 hover:text-white transition-all duration-300 flex items-center justify-center shadow-sm"
                     aria-label={link.name}
                   >

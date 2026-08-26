@@ -101,8 +101,8 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
               <p className="text-graycustom font-sans text-xs font-medium">Loading Registry...</p>
             </div>
           ) : (
-            /* 5-per-row Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            /* 4-per-row for Laptop/Desktop (lg:grid-cols-4), 2-per-row for Phones/Tablets (grid-cols-2) */
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {artists.map((artist, idx) => (
                 <motion.div
                   key={artist.id}
@@ -112,59 +112,25 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                   className="group cursor-pointer"
                   onClick={() => setSelectedArtist(artist)}
                 >
-                  {/* Card */}
-                  <div className="bg-white rounded-[24px] overflow-hidden border border-slate-200/50 shadow-sm hover:shadow-xl transition-all duration-500">
-                    {/* Image */}
-                    <div
-                      className="relative w-full overflow-hidden"
-                      style={{ aspectRatio: '3/4' }}
-                    >
+                  {/* Sleek Minimal Card - 2-3px Rounded Corners, Light Bottom Gradient Overlay */}
+                  <div className="bg-white rounded-sm overflow-hidden border border-slate-200/60 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative">
+                    {/* Image Container */}
+                    <div className="relative w-full aspect-square overflow-hidden bg-slate-100">
                       <img
                         src={artist.portrait}
                         alt={artist.name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
+                        className="w-full h-full object-cover filter grayscale group-hover:scale-105 transition-all duration-700 ease-out"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      {/* Hover CTA */}
-                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                        <span className="text-[9px] font-mono text-white tracking-widest uppercase bg-turquoise/80 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                          VIEW FULL PROFILE →
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Info Panel */}
-                    <div className="p-5 space-y-3">
-                      <div>
-                        <h3 className="text-lg font-serif font-bold text-midnight tracking-tight leading-tight">
-                          {artist.name}
-                        </h3>
-                        <span className="text-[10px] font-mono text-turquoise font-bold uppercase tracking-widest mt-1 block">
-                          {artist.style}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-4 text-[10px] font-mono text-graycustom">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-turquoise" />
-                          {artist.country}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-turquoise" />
-                          b. {artist.born}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-graycustom leading-relaxed line-clamp-3">
-                        {artist.bio}
-                      </p>
-
-                      <div className="pt-2 border-t border-slate-100">
-                        <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider block mb-0.5">Medium</span>
-                        <span className="text-[11px] font-sans font-medium text-midnight">{artist.medium}</span>
+                      {/* Minimal Soft Bottom Gradient Overlay on Hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
+                        <div className="transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 ease-out">
+                          <h3 className="text-xl md:text-2xl font-serif font-bold text-white tracking-tight leading-tight drop-shadow">
+                            {artist.name}
+                          </h3>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -224,11 +190,11 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                   <span className="text-[10px] font-mono text-turquoise font-bold uppercase tracking-widest block mb-2">
                     ARTIST PORTRAIT
                   </span>
-                  <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-md">
+                  <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-md group">
                     <img
                       src={selectedArtist.portrait}
                       alt={selectedArtist.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover filter grayscale transition-all duration-700 ease-out"
                       referrerPolicy="no-referrer"
                     />
                   </div>
@@ -415,23 +381,20 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                     onClick={() => setSelectedArtist(artist)}
                     className="shrink-0 w-[240px] md:w-[280px] group cursor-pointer"
                   >
-                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[24px] shadow-sm hover:shadow-xl transition-all duration-500 border border-slate-200/40">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm shadow-sm hover:shadow-xl transition-all duration-500 border border-slate-200/40">
                       <img
                         src={artist.portrait}
                         alt={artist.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1200ms] ease-out"
+                        className="w-full h-full object-cover filter grayscale group-hover:scale-105 transition-all duration-700 ease-out"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-300" />
-                      
-                      {/* Name overlay */}
-                      <div className="absolute bottom-6 left-6 right-6">
-                        <h4 className="text-lg md:text-xl font-serif font-bold text-white tracking-tight leading-tight">
-                          {artist.name}
-                        </h4>
-                        <span className="text-[8px] font-mono text-turquoise tracking-widest uppercase mt-1.5 block opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
-                          VIEW PROFILE →
-                        </span>
+                      {/* Minimal Soft Bottom Gradient Overlay on Hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
+                        <div className="transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 ease-out">
+                          <h4 className="text-xl md:text-2xl font-serif font-bold text-white tracking-tight leading-tight drop-shadow">
+                            {artist.name}
+                          </h4>
+                        </div>
                       </div>
                     </div>
                   </div>

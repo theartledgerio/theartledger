@@ -124,13 +124,17 @@ export default function SignInModal({ isOpen, onClose, onSuccess }: SignInModalP
                 </button>
               </form>
 
-              <div className="text-center">
+              <div className="pt-2 text-center space-y-2.5 border-t border-slate-200/60">
                 <button
                   onClick={() => setIsRegister(!isRegister)}
-                  className="text-xs text-turquoise hover:underline font-semibold cursor-pointer"
+                  className="text-xs text-turquoise hover:underline font-semibold cursor-pointer block mx-auto"
                 >
                   {isRegister ? 'Already have an account? Sign In' : "Don't have an account? Register"}
                 </button>
+
+                <p className="text-[10px] font-mono text-slate-500 leading-relaxed max-w-xs mx-auto pt-1">
+                  🔒 <span className="font-semibold text-slate-600">Credential Policy:</span> Login credentials are locked to your email upon creation. Password reset or changes require direct Admin authorization (<span className="text-turquoise">curations@infoartledger.com</span>).
+                </p>
               </div>
             </div>
           </motion.div>

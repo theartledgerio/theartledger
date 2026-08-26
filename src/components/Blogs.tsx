@@ -239,7 +239,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
         if (error) throw error;
 
         const filtered = data || [];
-        
+
         const extractFirstImage = (htmlContent: string) => {
           const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);
           return match ? match[1] : null;
@@ -258,12 +258,12 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
               readingTime: '12 min read',
               author: item.name || 'Editorial Board',
               category: 'Art Market & Philosophy',
-              date: item.published_at 
+              date: item.published_at
                 ? new Date(item.published_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })
                 : 'Mar 15, 2026',
               featured: false
             };
@@ -272,7 +272,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           const wordCount = item.content ? item.content.split(/\s+/).length : 0;
           const readMin = Math.max(1, Math.ceil(wordCount / 200));
           const firstImage = extractFirstImage(item.content || '');
-          
+
           return {
             id: item.id,
             title: item.title,
@@ -282,12 +282,12 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
             readingTime: `${readMin} min read`,
             author: item.name || 'Editorial Board',
             category: item.category || 'Contemporary',
-            date: item.published_at 
+            date: item.published_at
               ? new Date(item.published_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })
               : 'Recent',
             featured: index === 0
           };
@@ -393,7 +393,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
       className="py-16 md:py-24 bg-offwhite"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
-        
+
         {/* Improved Section Header - Elegant Editorial Design */}
         <div className="border-b border-slate-200/60 pb-8 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
@@ -410,7 +410,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
         </div>
 
         {isHome ? (
-          // HOME LAYOUT: Render ONLY the single latest / featured blog with image on left and text on right
+          // HOME LAYOUT: Render ONLY the single latest / featured blog with original grand layout
           featuredBlog ? (
             <div className="max-w-5xl mx-auto">
               <motion.div
@@ -496,63 +496,59 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
             </div>
           )
         ) : (
-          // DEDICATED ARCHIVE PAGE LAYOUT (Single-column stacked horizontal cards matching Home page style)
+          // DEDICATED ARCHIVE PAGE LAYOUT (Single-column stacked horizontal cards matching reference style)
           filteredBlogs.length === 0 ? (
             <div className="text-center py-20 border border-dashed border-gray-200 rounded-3xl max-w-5xl mx-auto">
               <p className="text-graycustom font-sans text-sm">No editorial articles match your search criteria.</p>
             </div>
           ) : (
-            <div className="max-w-5xl mx-auto space-y-10">
+            <div className="max-w-5xl mx-auto space-y-6">
               {filteredBlogs.map((blog) => (
                 <motion.div
                   key={blog.id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
+                  transition={{ duration: 0.5 }}
                   onClick={() => onSelectBlog?.(blog)}
-                  className="group relative rounded-[32px] overflow-hidden bg-warmwhite border-[0.5px] border-[#EAE5D8]/30 hover:border-turquoise/30 shadow-xl hover:shadow-2xl transition-all duration-500 grid grid-cols-1 md:grid-cols-12 items-stretch cursor-pointer"
+                  className="group relative rounded-[28px] overflow-hidden bg-[#FAF9F5] border border-[#E2E7E1] hover:border-turquoise/40 shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-12 items-center p-4 md:p-6 gap-6 cursor-pointer"
                 >
                   {/* Left Column: Photo cover (Image on Left) */}
-                  <div className="md:col-span-5 overflow-hidden relative min-h-[300px] md:min-h-[380px] bg-slate-100 flex items-center justify-center p-3">
+                  <div className="md:col-span-5 overflow-hidden relative h-[210px] md:h-[230px] rounded-2xl w-full bg-slate-100">
                     <img
                       src={blog.image}
                       alt={blog.title}
                       loading="lazy"
-                      className="w-full h-full object-cover rounded-2xl group-hover:scale-103 transition-transform duration-700 ease-out shadow-sm"
+                      className="w-full h-full object-cover object-top group-hover:scale-103 transition-transform duration-700 ease-out"
                       referrerPolicy="no-referrer"
                     />
-                    {/* Subtle paper luster overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-midnight/10 via-transparent to-white/10 pointer-events-none mix-blend-overlay" />
                   </div>
 
                   {/* Right Column: Body details (Text on Right) */}
-                  <div className="md:col-span-7 p-7 md:p-10 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-[10px] font-mono text-turquoise font-bold uppercase">
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5" />
-                          {blog.author}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 text-graycustom font-medium">
-                          <Clock className="w-3.5 h-3.5" />
-                          {blog.readingTime}
-                        </span>
-                        <span>•</span>
-                        <span className="text-graycustom font-medium">{blog.date}</span>
-                      </div>
-
-                      <h3 className="text-2xl sm:text-3xl font-serif font-bold text-midnight tracking-tight leading-tight group-hover:text-turquoise transition-colors duration-300">
-                        {blog.title}
-                      </h3>
-
-                      <p className="text-xs md:text-sm text-graycustom leading-relaxed font-medium line-clamp-3">
-                        {blog.excerpt}
-                      </p>
+                  <div className="md:col-span-7 flex flex-col justify-center space-y-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-[#2D5A4C] font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1">
+                        <User className="w-3.5 h-3.5 text-turquoise" />
+                        {blog.author}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 text-slate-500 font-medium">
+                        <Clock className="w-3.5 h-3.5 text-turquoise" />
+                        {blog.readingTime}
+                      </span>
+                      <span>•</span>
+                      <span className="text-slate-500 font-medium">{blog.date}</span>
                     </div>
 
-                    <div className="pt-6 mt-6 border-t border-offwhite/85 flex items-center justify-between">
+                    <h3 className="text-2xl md:text-3xl font-serif font-bold text-midnight tracking-tight leading-tight group-hover:text-turquoise transition-colors duration-300">
+                      {blog.title}
+                    </h3>
+
+                    <p className="text-xs md:text-sm text-slate-600 leading-relaxed font-medium line-clamp-3">
+                      {blog.excerpt}
+                    </p>
+
+                    <div className="pt-2 flex items-center justify-between">
                       <button
                         id={`read-blog-btn-${blog.id}`}
                         onClick={(e) => {
@@ -561,13 +557,8 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
                         }}
                         className="group flex items-center space-x-2 text-xs font-sans font-bold uppercase tracking-widest text-midnight hover:text-turquoise transition-colors duration-200 cursor-pointer"
                       >
-                        <span>Read Full Essay</span>
-                        <motion.span
-                          animate={{ x: [0, 4, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                        >
-                          <ArrowRight className="w-4 h-4 text-turquoise" />
-                        </motion.span>
+                        <span>Read More</span>
+                        <ArrowRight className="w-4 h-4 text-turquoise group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
                   </div>
@@ -575,7 +566,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
               ))}
             </div>
           )
-      )}
+        )}
 
       </div>
 

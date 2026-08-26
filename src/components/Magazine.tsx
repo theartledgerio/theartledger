@@ -98,7 +98,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   const [isPending, setIsPending] = useState(false);
   const [receiptId, setReceiptId] = useState('');
   const [mapOpen, setMapOpen] = useState(false);
-  const [purchasePlan, setPurchasePlan] = useState<'single' | 'digital_single'>('single');
+  const [purchasePlan, setPurchasePlan] = useState<'single' | 'digital_single' | 'annual_subscription'>('single');
 
   useEffect(() => {
     if (addressData) {
@@ -109,7 +109,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
     }
   }, [addressData]);
 
-  const handleOpenPurchase = (plan: 'single' | 'digital_single') => {
+  const handleOpenPurchase = (plan: 'single' | 'digital_single' | 'annual_subscription') => {
     if (!user) {
       onSignInClick && onSignInClick();
       return;
@@ -240,7 +240,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   }, []);
 
   const [purchasedMagIds, setPurchasedMagIds] = useState<string[]>([]);
-  const isAdminUser = user?.email?.toLowerCase().trim() === 'admin@theartledger.com';
+  const adminEmails = ['admin@theartledger.com', 'theartledger00@gmail.com', 'curations@infoartledger.com'];
+  const isAdminUser = !!user?.email && adminEmails.includes(user.email.toLowerCase().trim());
 
   useEffect(() => {
     async function loadUserPurchases() {
@@ -251,15 +252,24 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       try {
         const { data, error } = await supabase
           .from('payments')
-          .select('selected_issue, status')
-          .eq('email', user.email);
-        if (error) {
+          .select('selected_issue, plan, status')
+          .eq('email', user.email.toLowerCase().trim());
+        
+        if (!error && data) {
+          const paidOrders = data.filter((o: any) => o.status === 'paid' || o.status === 'completed' || o.status === 'captured');
+          const isAnnualSubscriber = paidOrders.some((o: any) => o.plan === '1_year' || o.plan === 'annual_subscription' || o.plan === 'annual');
+          
+          if (isAnnualSubscriber) {
+            // Unlock all issue IDs for annual subscribers
+            setPurchasedMagIds(magazines.map(m => m.id));
+          } else {
+            const paidIssueIds = paidOrders.map((o: any) => o.selected_issue).filter(Boolean);
+            const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
+            setPurchasedMagIds(Array.from(new Set([...paidIssueIds, ...local])));
+          }
+        } else {
           const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
           setPurchasedMagIds(local);
-        } else if (data) {
-          const ids = data.map((o: any) => o.selected_issue).filter(Boolean);
-          const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
-          setPurchasedMagIds(Array.from(new Set([...ids, ...local])));
         }
       } catch (e) {
         const local = JSON.parse(localStorage.getItem(`purchased_mags_${user.email}`) || '[]');
@@ -267,7 +277,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
       }
     }
     loadUserPurchases();
-  }, [user]);
+  }, [user, magazines]);
 
   useEffect(() => {
     let timer: any = null;
@@ -507,21 +517,21 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
   }
 
   return (
-    <section id="magazine" className="py-16 md:py-24 bg-warmwhite">
+    <section id="magazine" className="pt-6 md:pt-10 pb-16 bg-warmwhite">
 
       {/* Standardized Section Header */}
-      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 mb-6 md:mb-8">
         <div className="border-b border-offwhite pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <span className="text-[10px] font-mono tracking-widest text-midnight font-bold uppercase block mb-2">
-              PERIODICAL PRINT
+              QUARTERLY PRINT
             </span>
             <h2 className="text-3xl md:text-5xl font-serif font-bold text-midnight tracking-tight leading-none">
               The Magazine
             </h2>
           </div>
           <p className="text-xs md:text-sm text-graycustom font-medium max-w-sm md:text-right leading-relaxed">
-            Our flagship biannual print release, delivering meticulous critical essays, collector strategies, and studio portraits.
+            Our flagship quarterly print release, delivering meticulous critical essays, collector strategies, and studio portraits.
           </p>
         </div>
       </div>
@@ -548,9 +558,17 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <button
                 onClick={() => handleOpenPurchase('single')}
-                className="group flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
+                className="group flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
               >
-                <span>Order Physical Print Copy</span>
+                <span>Single Quarterly Print</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenPurchase('annual_subscription')}
+                className="group flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full border border-midnight/80 bg-white text-midnight hover:bg-midnight hover:text-white font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-sm cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 group-hover:text-turquoise transition-colors" />
+                <span>Annual Subscription (4 Issues/Yr)</span>
               </button>
 
               {(activeIssue.issueNumber.includes('4') || activeIssue.issueNumber.includes('3') || activeIssue.title.toLowerCase().includes('v4') || activeIssue.title.toLowerCase().includes('v3') || activeIssue.title.toLowerCase().includes('issue 4') || activeIssue.title.toLowerCase().includes('issue 3') || activeIssue.title.toLowerCase().includes('vol 4') || activeIssue.title.toLowerCase().includes('vol 3')) && (
@@ -675,6 +693,13 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
+
+                    {/* Watermark Overlay on Cover */}
+                    <div className="absolute inset-0 pointer-events-none select-none z-15 flex items-center justify-center opacity-25 rotate-[-25deg]">
+                      <span className="font-serif font-bold text-xl md:text-2xl tracking-[0.25em] text-white uppercase drop-shadow">
+                        THE ART LEDGER
+                      </span>
+                    </div>
 
                     {/* Spine Fold / Hinge Indentation Line */}
                     <div className="absolute inset-y-0 left-[14px] w-[1px] bg-black/30 shadow-[1px_0_0_rgba(255,255,255,0.15)] pointer-events-none z-20" />
@@ -845,9 +870,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             </div>
 
             <div className="absolute top-4 right-6 z-50 flex items-center gap-3 pointer-events-auto">
-              <span className="text-[11px] font-mono text-white/80 font-bold bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/15 shadow-xl">
-                {isMobileReader ? `${currentPageIndex + 1} / ${activeIssue.pages.length}` : `Spread ${Math.floor(currentPageIndex / 2) + 1} / ${Math.ceil(activeIssue.pages.length / 2)}`}
-              </span>
+
 
               <button
                 onClick={() => setPreviewOpen(false)}
@@ -858,11 +881,11 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
               </button>
             </div>
 
-            {/* Pure 100vw x 100vh Fullscreen Stage */}
-            <div className="relative w-full h-full flex items-center justify-center p-4 md:p-8">
+            {/* Pure 100vw x 100vh Fullscreen Stage without scrollbars (Protected Digital Reader) */}
+            <div className="relative w-full h-full flex items-center justify-center p-2 md:p-6 no-scrollbar overflow-hidden">
               {readerViewMode === 'pdf' && activeIssue.pdfUrl ? (
                 <div 
-                  className="w-full h-full relative select-none rounded-2xl overflow-hidden shadow-2xl bg-white"
+                  className="w-full h-[90vh] max-w-[1400px] relative select-none rounded-2xl overflow-hidden shadow-2xl bg-white no-scrollbar"
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   <iframe
@@ -873,8 +896,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         ? `${activeIssue.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`
                         : `https://docs.google.com/viewer?url=${encodeURIComponent(activeIssue.pdfUrl)}&embedded=true`
                     }
-                    className="w-full h-full border-none bg-white"
-                    title={`${activeIssue.title} Digital Magazine Reader`}
+                    className="w-full h-full border-none bg-white no-scrollbar"
+                    title={`${activeIssue.title} Digital Magazine PDF`}
                   />
                 </div>
               ) : (
@@ -889,8 +912,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                     </button>
                   )}
 
-                  {/* High-Definition 2-Page Desktop / 1-Page Mobile Fullscreen Spread Container */}
-                  <div className="relative w-full h-[92vh] max-w-full flex items-center justify-center shadow-[0_40px_140px_rgba(0,0,0,0.98)] rounded-2xl overflow-hidden bg-transparent p-2 md:p-4">
+                  {/* High-Definition Protected Dual-Page Desktop / Single-Page Mobile Stage */}
+                  <div className="relative w-full h-[88vh] max-w-[1500px] flex items-center justify-center shadow-[0_40px_140px_rgba(0,0,0,0.98)] rounded-2xl overflow-hidden bg-transparent p-0 no-scrollbar select-none">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={`spread-${currentPageIndex}`}
@@ -898,37 +921,59 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.985 }}
                         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                        className="w-full h-full flex items-center justify-center gap-3 md:gap-6 bg-transparent max-h-[88vh]"
+                        className="w-full h-full flex items-center justify-center bg-transparent no-scrollbar overflow-hidden"
                       >
-                        {/* Left Page (Desktop Spread Left / Mobile Single Page) */}
-                        <div className={`${isMobileReader ? 'w-full h-full' : 'w-1/2 h-full'} relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80`}>
+                        {/* Left Page (Desktop 50% / Mobile 100% Width) */}
+                        <div className={`${isMobileReader ? 'w-full h-full' : 'w-1/2 h-full'} relative flex items-center justify-center bg-white rounded-l-2xl p-0 shadow-2xl overflow-hidden select-none border-r border-slate-200/60 no-scrollbar`}>
                           <img
                             src={activeIssue.pages[currentPageIndex]}
                             alt="Magazine left page"
-                            className="w-full h-full object-contain rounded-[4px] pointer-events-auto select-none shadow-sm"
+                            className="w-full h-full object-cover md:object-contain bg-white pointer-events-auto select-none"
                             onContextMenu={(e) => e.preventDefault()}
                             onDragStart={(e) => e.preventDefault()}
                             referrerPolicy="no-referrer"
                           />
+                          {/* Subtle Watermark */}
+                          <div className="absolute bottom-6 right-6 pointer-events-none select-none z-20 flex items-center gap-1.5 opacity-40 mix-blend-difference">
+                            <span className="font-serif font-bold text-[10px] md:text-xs tracking-[0.25em] text-white uppercase drop-shadow-md">
+                              THE ART LEDGER
+                            </span>
+                          </div>
+                          <div className="absolute inset-0 pointer-events-none select-none z-20 flex items-center justify-center opacity-[0.12] rotate-[-25deg]">
+                            <span className="font-serif font-bold text-2xl md:text-4xl tracking-[0.3em] text-white uppercase drop-shadow">
+                              THE ART LEDGER
+                            </span>
+                          </div>
                           {!isMobileReader && (
                             /* Realistic spine shadow gradient */
-                            <div className="absolute inset-y-0 right-0 w-8 md:w-16 bg-gradient-to-l from-black/25 via-black/8 to-transparent pointer-events-none rounded-r-xl" />
+                            <div className="absolute inset-y-0 right-0 w-8 md:w-16 bg-gradient-to-l from-black/25 via-black/8 to-transparent pointer-events-none rounded-r-xl z-30" />
                           )}
                         </div>
 
-                        {/* Right Page (Desktop Spread Right - 2 Page View) */}
+                        {/* Right Page (Desktop 50% Width 2-Page View) */}
                         {!isMobileReader && currentPageIndex + 1 < activeIssue.pages.length && (
-                          <div className="w-1/2 h-full relative flex items-center justify-center bg-white rounded-xl p-2 md:p-3 shadow-2xl overflow-hidden select-none border border-slate-200/80">
+                          <div className="w-1/2 h-full relative flex items-center justify-center bg-white rounded-r-2xl p-0 shadow-2xl overflow-hidden select-none border-l border-slate-200/60 no-scrollbar">
                             <img
                               src={activeIssue.pages[currentPageIndex + 1]}
                               alt="Magazine right page"
-                              className="w-full h-full object-contain rounded-[4px] pointer-events-auto select-none shadow-sm"
+                              className="w-full h-full object-cover md:object-contain bg-white pointer-events-auto select-none"
                               onContextMenu={(e) => e.preventDefault()}
                               onDragStart={(e) => e.preventDefault()}
                               referrerPolicy="no-referrer"
                             />
+                            {/* Subtle Watermark */}
+                            <div className="absolute bottom-6 right-6 pointer-events-none select-none z-20 flex items-center gap-1.5 opacity-40 mix-blend-difference">
+                              <span className="font-serif font-bold text-[10px] md:text-xs tracking-[0.25em] text-white uppercase drop-shadow-md">
+                                THE ART LEDGER
+                              </span>
+                            </div>
+                            <div className="absolute inset-0 pointer-events-none select-none z-20 flex items-center justify-center opacity-[0.12] rotate-[-25deg]">
+                              <span className="font-serif font-bold text-2xl md:text-4xl tracking-[0.3em] text-white uppercase drop-shadow">
+                                THE ART LEDGER
+                              </span>
+                            </div>
                             {/* Realistic spine shadow gradient */}
-                            <div className="absolute inset-y-0 left-0 w-8 md:w-16 bg-gradient-to-r from-black/25 via-black/8 to-transparent pointer-events-none rounded-l-xl" />
+                            <div className="absolute inset-y-0 left-0 w-8 md:w-16 bg-gradient-to-r from-black/25 via-black/8 to-transparent pointer-events-none rounded-l-xl z-30" />
                           </div>
                         )}
                       </motion.div>
@@ -997,9 +1042,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       type="button"
                       onClick={() => {
                         setPurchaseOpen(false);
-                        if (activeIssue.pdfUrl) {
-                          setReaderViewMode('pdf');
-                        }
+                        setReaderViewMode('spread');
                         setPreviewOpen(true);
                       }}
                       className="group flex items-center justify-center gap-2.5 px-8 py-4 w-full rounded-xl bg-midnight text-white hover:bg-turquoise font-sans font-bold uppercase text-[10px] tracking-widest transition-all duration-300 shadow-xl cursor-pointer"
@@ -1174,21 +1217,41 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                   {/* Summary Pricing Block */}
                   <div className="p-4 bg-slate-100/80 rounded-2xl border border-slate-200/60 text-xs space-y-2 text-midnight">
                     <div className="flex justify-between font-semibold">
-                      <span className="text-graycustom">{purchasePlan === 'digital_single' ? 'Online Print / Digital PDF' : 'Physical Print Edition'}</span>
+                      <span className="text-graycustom">
+                        {purchasePlan === 'annual_subscription'
+                          ? 'Annual Patron Subscription (4 Quarterly Releases)'
+                          : purchasePlan === 'digital_single'
+                          ? 'Online Print / Digital PDF'
+                          : 'Single Physical Print Copy'}
+                      </span>
                       <span>
                         {currency === 'USD'
-                          ? `$${purchasePlan === 'digital_single' ? (activeIssue.digitalPriceUsd || 10) : (activeIssue.priceUsd || Math.ceil((activeIssue.price || 499) / 80))}`
-                          : `₹${purchasePlan === 'digital_single' ? (activeIssue.digitalPrice || 299).toFixed(0) : (activeIssue.price || 499).toFixed(0)}`
+                          ? `$${
+                              purchasePlan === 'annual_subscription'
+                                ? 40
+                                : purchasePlan === 'digital_single'
+                                ? (activeIssue.digitalPriceUsd || 10)
+                                : (activeIssue.priceUsd || Math.ceil((activeIssue.price || 499) / 80))
+                            }`
+                          : `₹${
+                              purchasePlan === 'annual_subscription'
+                                ? 1800
+                                : purchasePlan === 'digital_single'
+                                ? (activeIssue.digitalPrice || 299).toFixed(0)
+                                : (activeIssue.price || 499).toFixed(0)
+                            }`
                         }
                       </span>
                     </div>
                     {purchasePlan !== 'digital_single' && (
                       <div className="flex justify-between font-semibold text-graycustom">
-                        <span>Shipping ({shippingCountry})</span>
+                        <span>
+                          Shipping ({shippingCountry}){purchasePlan === 'annual_subscription' ? ' (All 4 Issues Included)' : ''}
+                        </span>
                         <span>
                           {currency === 'USD'
-                            ? `$${shippingCountry.toLowerCase().trim() === 'india' ? 5 : 15}`
-                            : `₹${shippingCountry.toLowerCase().trim() === 'india' ? 150 : 2500}`
+                            ? `$${shippingCountry.toLowerCase().trim() === 'india' ? (purchasePlan === 'annual_subscription' ? 10 : 5) : (purchasePlan === 'annual_subscription' ? 40 : 15)}`
+                            : `₹${shippingCountry.toLowerCase().trim() === 'india' ? (purchasePlan === 'annual_subscription' ? 300 : 150) : (purchasePlan === 'annual_subscription' ? 5000 : 2500)}`
                           }
                         </span>
                       </div>
@@ -1198,12 +1261,20 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                       <span>Total</span>
                       <span>
                         {currency === 'USD'
-                          ? `$${purchasePlan === 'digital_single' 
-                              ? (activeIssue.digitalPriceUsd || 10) 
-                              : ((activeIssue.priceUsd || Math.ceil((activeIssue.price || 499) / 80)) + (shippingCountry.toLowerCase().trim() === 'india' ? 5 : 15))}`
-                          : `₹${purchasePlan === 'digital_single' 
-                              ? (activeIssue.digitalPrice || 299).toFixed(0) 
-                              : ((activeIssue.price || 499) + (shippingCountry.toLowerCase().trim() === 'india' ? 150 : 2500)).toFixed(0)}`
+                          ? `$${
+                              purchasePlan === 'annual_subscription'
+                                ? (40 + (shippingCountry.toLowerCase().trim() === 'india' ? 10 : 40))
+                                : purchasePlan === 'digital_single'
+                                ? (activeIssue.digitalPriceUsd || 10)
+                                : ((activeIssue.priceUsd || Math.ceil((activeIssue.price || 499) / 80)) + (shippingCountry.toLowerCase().trim() === 'india' ? 5 : 15))
+                            }`
+                          : `₹${
+                              purchasePlan === 'annual_subscription'
+                                ? (1800 + (shippingCountry.toLowerCase().trim() === 'india' ? 300 : 5000)).toFixed(0)
+                                : purchasePlan === 'digital_single'
+                                ? (activeIssue.digitalPrice || 299).toFixed(0)
+                                : ((activeIssue.price || 499) + (shippingCountry.toLowerCase().trim() === 'india' ? 150 : 2500)).toFixed(0)
+                            }`
                         }
                       </span>
                     </div>

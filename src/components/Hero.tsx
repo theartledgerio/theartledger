@@ -48,7 +48,7 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
     id: 'hero-event',
     media_type: 'image',
     media_url: '/blog1/1.png',
-    badge: 'UPCOMING EXHIBITION // MUMBAI',
+    badge: 'EXHIBITION ARCHIVE // MUMBAI',
     title: 'Freedom - Season 3',
     subtitle: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
     link_page: 'events',
@@ -129,12 +129,12 @@ export default function Hero({ onChangePage }: HeroProps) {
           try {
             const parsed = JSON.parse(localSaved);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              customDeck = parsed.slice(0, 3); // Strictly 3 cards
+              customDeck = parsed; // Allow any number of custom cards
             }
           } catch (e) {}
         }
 
-        if (customDeck && customDeck.length === 3) {
+        if (customDeck && customDeck.length > 0) {
           setCards(customDeck);
           return;
         }
@@ -255,9 +255,9 @@ export default function Hero({ onChangePage }: HeroProps) {
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* DESKTOP 3-CARD SHUFFLE DECK */}
+          {/* DESKTOP SHUFFLE DECK */}
           <div className="hidden sm:flex relative w-full h-[480px] lg:h-[520px] gap-3.5 p-0 bg-transparent overflow-hidden">
-            {cards.slice(0, 3).map((card, index) => {
+            {cards.map((card, index) => {
               const isActive = index === activeIndex;
 
               return (
@@ -267,7 +267,7 @@ export default function Hero({ onChangePage }: HeroProps) {
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) transform-gpu will-change-transform select-none ${
                     isActive
-                      ? 'flex-[5] shadow-[0_15px_35px_rgba(0,0,0,0.6)] z-20 border-2 border-turquoise/50 ring-4 ring-turquoise/15 scale-[1.01]'
+                      ? 'flex-[5] shadow-[0_15px_35px_rgba(0,0,0,0.6)] z-20 border-2 border-white/50 ring-4 ring-white/10 scale-[1.01]'
                       : 'flex-[1.2] opacity-75 hover:opacity-100 z-10 border border-white/10 hover:flex-[1.6]'
                   }`}
                   style={{
@@ -336,7 +336,7 @@ export default function Hero({ onChangePage }: HeroProps) {
                             e.stopPropagation();
                             onChangePage(card.link_page || 'blogs');
                           }}
-                          className="inline-flex items-center gap-2 text-xs font-sans font-bold uppercase tracking-wider text-midnight bg-turquoise hover:bg-white px-6 py-3 rounded-xl transition-all duration-300 w-fit cursor-pointer transform-gpu hover:scale-105 active:scale-95 shadow-lg shadow-turquoise/25"
+                          className="inline-flex items-center gap-2 text-xs font-sans font-bold uppercase tracking-wider text-white bg-midnight/90 hover:bg-white hover:text-midnight border border-white/30 px-6 py-3 rounded-xl transition-all duration-300 w-fit cursor-pointer transform-gpu hover:scale-105 active:scale-95 shadow-lg backdrop-blur-md"
                         >
                           <span>{card.link_text || 'Discover'}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -345,12 +345,9 @@ export default function Hero({ onChangePage }: HeroProps) {
                     )}
                   </AnimatePresence>
 
-                  {/* INACTIVE CARD VERTICAL STRIP & ACCENT */}
+                  {/* INACTIVE CARD VERTICAL STRIP & TITLE */}
                   {!isActive && (
-                    <div className="absolute inset-0 p-4 text-white flex flex-col justify-between items-center pointer-events-none z-20">
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-turquoise/90 uppercase bg-black/60 px-2 py-1 rounded border border-white/10">
-                        0{index + 1}
-                      </span>
+                    <div className="absolute inset-0 p-4 text-white flex flex-col justify-end items-center pointer-events-none z-20">
                       <div className="flex flex-col items-center">
                         <span className="text-[11px] font-sans font-extrabold uppercase tracking-widest text-white drop-shadow-md [writing-mode:vertical-lr] rotate-180 line-clamp-1 py-4">
                           {card.title}
@@ -365,7 +362,7 @@ export default function Hero({ onChangePage }: HeroProps) {
 
           {/* MOBILE CAROUSEL */}
           <div className="flex sm:hidden w-full overflow-x-auto snap-x snap-mandatory gap-4 py-2 no-scrollbar">
-            {cards.slice(0, 3).map((card, index) => (
+            {cards.map((card, index) => (
               <div
                 key={card.id || index}
                 onClick={() => onChangePage(card.link_page || 'blogs')}
@@ -411,7 +408,7 @@ export default function Hero({ onChangePage }: HeroProps) {
                       {card.subtitle}
                     </p>
                   )}
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-turquoise">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-white">
                     {card.link_text || 'Explore'} &rarr;
                   </span>
                 </div>
@@ -419,9 +416,9 @@ export default function Hero({ onChangePage }: HeroProps) {
             ))}
           </div>
 
-          {/* DECK INDICATOR DOTS (3 Cards) */}
+          {/* DECK INDICATOR DOTS */}
           <div className="flex items-center gap-2 mt-4">
-            {cards.slice(0, 3).map((_, i) => (
+            {cards.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setActiveIndex(i)}
