@@ -171,10 +171,62 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
         )}
 
         {/* Article Content Render */}
-        <div 
-          className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 blog-rich-content"
-          dangerouslySetInnerHTML={{ __html: blog.content }}
-        />
+        {(() => {
+          const content = blog.content || '';
+          if (content.trim().startsWith('<') || /<[a-z][\s\S]*>/i.test(content)) {
+            return (
+              <div 
+                className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 blog-rich-content"
+                dangerouslySetInnerHTML={{ __html: content }}
+              />
+            );
+          }
+
+          const blocks = content.split(/\n\s*\n/).filter(b => b.trim().length > 0);
+
+          return (
+            <div className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 space-y-6">
+              {blocks.map((block, idx) => {
+                const trimmed = block.trim();
+
+                if (
+                  (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) &&
+                  (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('googleusercontent.com') || trimmed.includes('unsplash.com') || trimmed.startsWith('data:image/'))
+                ) {
+                  return (
+                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8]">
+                      <img src={trimmed} alt="Article Image" className="w-full h-auto object-cover max-h-[70vh]" />
+                    </div>
+                  );
+                }
+
+                if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
+                  const headingText = trimmed.replace(/^#+\s*/, '');
+                  return (
+                    <h2 key={idx} className="text-2xl font-serif font-bold text-midnight pt-4 tracking-tight">
+                      {headingText}
+                    </h2>
+                  );
+                }
+
+                if (trimmed.startsWith('>') || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+                  const quoteText = trimmed.replace(/^>\s*/, '').replace(/^"|"$/g, '');
+                  return (
+                    <blockquote key={idx} className="italic font-serif text-slate-700 pl-5 border-l-4 border-turquoise my-6 text-lg md:text-xl leading-relaxed">
+                      "{quoteText}"
+                    </blockquote>
+                  );
+                }
+
+                return (
+                  <p key={idx} className="font-sans text-graycustom leading-relaxed font-normal">
+                    {trimmed}
+                  </p>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Discussion / Comments Section */}
         <div className="max-w-2xl mx-auto border-t border-offwhite mt-16 pt-12">

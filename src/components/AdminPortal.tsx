@@ -9,7 +9,8 @@ import { supabase } from '../supabase';
 import { 
   Lock, Mail, Eye, EyeOff, LayoutDashboard, BookOpen, 
   Users, Layers, LogOut, Plus, Trash2, Edit3, X, Save, 
-  CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud, CreditCard, Calendar, MapPin, Images, Film
+  CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud, CreditCard, Calendar, MapPin, Images, Film,
+  Search, Filter, RotateCcw
 } from 'lucide-react';
 import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
@@ -21,6 +22,25 @@ interface AdminPortalProps {
 }
 
 type TabType = 'dashboard' | 'hero' | 'blogs' | 'magazines' | 'artists' | 'payments' | 'events';
+
+export const convertDriveUrl = (url: string): string => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.includes('drive.google.com') && (trimmed.includes('/file/d/') || trimmed.includes('id='))) {
+    let fileId = '';
+    const match = trimmed.match(/\/file\/d\/([^\/\?]+)/);
+    if (match) {
+      fileId = match[1];
+    } else {
+      const matchId = trimmed.match(/[?&]id=([^&]+)/);
+      if (matchId) fileId = matchId[1];
+    }
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+  }
+  return trimmed;
+};
 
 // Drag and Drop File Upload Component for Admin Forms
 const DragDropFileZone: React.FC<{
@@ -136,7 +156,7 @@ const DragDropFileZone: React.FC<{
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(convertDriveUrl(e.target.value))}
           placeholder={placeholder || 'Or paste direct URL / Google Drive link...'}
           className="flex-grow px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
         />
@@ -200,6 +220,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       localStorage.setItem('tal_seen_payment_ids', JSON.stringify(allCompletedIds));
     } catch (e) {}
   };
+
+  // Payment Filter & Search States
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+  const [paymentDateFilter, setPaymentDateFilter] = useState('all');
+  const [paymentPlanFilter, setPaymentPlanFilter] = useState('all');
 
   // CRUD Form Overlay states
   const [showFormModal, setShowFormModal] = useState(false);
@@ -598,14 +624,18 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
     const reader = new FileReader();
     
-    if (file.type === 'text/plain') {
+    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       reader.onload = (event) => {
+        const text = event.target?.result as string;
         setBlogDocument({
           fileName: file.name,
-          fileType: file.type,
-          fileData: event.target?.result as string,
-          textPreview: event.target?.result as string
+          fileType: file.type || 'text/plain',
+          fileData: text,
+          textPreview: text
         });
+        if (!blogContent || blogContent.trim() === '') {
+          setBlogContent(text);
+        }
       };
       reader.readAsText(file);
     } else {
@@ -666,13 +696,13 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     try {
       if (formType === 'blog') {
         const payload = {
-          title: blogTitle,
-          short_description: blogExcerpt,
-          content: blogContent,
-          image_url: blogImage,
-          name: blogAuthor,
-          category: blogCategory,
-          status: blogStatus,
+          title: blogTitle || 'Untitled Blog',
+          short_description: blogExcerpt || '',
+          content: blogContent || '',
+          image_url: convertDriveUrl(blogImage),
+          name: blogAuthor || 'Editorial Board',
+          category: blogCategory || 'Editorial',
+          status: blogStatus || 'approved',
           published_at: new Date().toISOString(),
           admin_notes: blogDocument ? JSON.stringify(blogDocument) : null
         };
@@ -751,14 +781,14 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         triggerToast(formMode === 'create' ? 'Magazine edition added successfully!' : 'Magazine edition updated successfully!');
       } else if (formType === 'artist') {
         const payload = {
-          name: artName,
-          short_bio: artShortBio,
-          image_url: artImageUrl,
-          style: artStyle,
-          country: artCountry,
-          born: artBorn,
-          medium: artMedium,
-          statement: artStatement,
+          name: artName || 'Untitled Artist',
+          short_bio: artShortBio || '',
+          image_url: convertDriveUrl(artImageUrl),
+          style: artStyle || 'Artist',
+          country: artCountry || '',
+          born: artBorn || '',
+          medium: artMedium || '',
+          statement: artStatement || '',
           display_order: parseInt(artDisplayOrder) || 0,
           is_published: true,
           profile_type: 'artist'
@@ -774,15 +804,23 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           triggerToast('Artist profile updated successfully!');
         }
       } else if (formType === 'event') {
+        const rawStatus = (eventStatus || 'Upcoming').toLowerCase();
+        let finalStatus = 'upcoming';
+        if (rawStatus.includes('completed')) finalStatus = 'completed';
+        else if (rawStatus.includes('past')) finalStatus = 'past';
+        else if (rawStatus.includes('current')) finalStatus = 'current';
+        else if (rawStatus.includes('draft')) finalStatus = 'draft';
+        else if (rawStatus.includes('published')) finalStatus = 'published';
+
         const payload = {
-          title: eventTitle,
-          short_description: eventSubtitle,
-          long_description: eventDescription,
+          title: eventTitle || 'Untitled Event',
+          short_description: eventSubtitle || '',
+          long_description: eventDescription || '',
           event_date: eventDate || new Date().toISOString().split('T')[0],
-          location: eventVenue,
-          featured_image_url: eventImage,
-          status: eventStatus.toLowerCase() === 'completed' ? 'completed' : eventStatus.toLowerCase() === 'draft' ? 'draft' : 'published',
-          slug: eventTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`
+          location: eventVenue || '',
+          featured_image_url: convertDriveUrl(eventImage),
+          status: finalStatus,
+          slug: (eventTitle || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`
         };
 
         if (formMode === 'create') {
@@ -1657,81 +1695,229 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           </div>
         )}
 
-        {activeTab === 'payments' && (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60">
-              <div>
-                <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">FINANCIAL LEDGER</span>
-                <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Payment Dashboard</h1>
-              </div>
-            </div>
+        {activeTab === 'payments' && (() => {
+          const filteredPayments = paymentsList.filter(pay => {
+            // 1. Search Query Filter
+            if (paymentSearch.trim() !== '') {
+              const q = paymentSearch.toLowerCase();
+              const nameMatch = (pay.name || '').toLowerCase().includes(q);
+              const emailMatch = (pay.email || '').toLowerCase().includes(q);
+              const phoneMatch = (pay.phone || '').toLowerCase().includes(q);
+              const orderMatch = (pay.razorpay_order_id || pay.razorpay_payment_id || pay.id || '').toLowerCase().includes(q);
+              const addressMatch = (pay.address || pay.shipping_address || '').toLowerCase().includes(q);
+              if (!nameMatch && !emailMatch && !phoneMatch && !orderMatch && !addressMatch) return false;
+            }
 
-            {/* Payments table with full address details */}
-            <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-slate-200/60 bg-slate-50/50 flex justify-between items-center">
-                <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">Transaction Records & Customer Details ({paymentsList.length})</h3>
+            // 2. Status Filter
+            if (paymentStatusFilter !== 'all') {
+              const st = (pay.status || '').toLowerCase();
+              if (paymentStatusFilter === 'paid' && st !== 'paid' && st !== 'captured' && st !== 'completed') return false;
+              if (paymentStatusFilter === 'pending' && (st === 'paid' || st === 'captured' || st === 'completed' || st === 'failed')) return false;
+              if (paymentStatusFilter === 'failed' && st !== 'failed') return false;
+            }
+
+            // 3. Plan Filter
+            if (paymentPlanFilter !== 'all') {
+              const planStr = (pay.plan || '').toLowerCase();
+              if (paymentPlanFilter === 'single' && !planStr.includes('single') && !planStr.includes('issue')) return false;
+              if (paymentPlanFilter === 'digital' && !planStr.includes('digital')) return false;
+              if (paymentPlanFilter === 'subscription' && !planStr.includes('year') && !planStr.includes('annual') && !planStr.includes('sub')) return false;
+            }
+
+            // 4. Date Range (Days) Filter
+            if (paymentDateFilter !== 'all') {
+              if (!pay.created_at) return false;
+              const payDate = new Date(pay.created_at);
+              const now = new Date();
+              const diffTime = Math.abs(now.getTime() - payDate.getTime());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              if (paymentDateFilter === 'today' && diffDays > 1) return false;
+              if (paymentDateFilter === '7days' && diffDays > 7) return false;
+              if (paymentDateFilter === '30days' && diffDays > 30) return false;
+              if (paymentDateFilter === '90days' && diffDays > 90) return false;
+            }
+
+            return true;
+          });
+
+          const totalInr = filteredPayments
+            .filter(p => p.currency !== 'USD' && (p.status === 'paid' || p.status === 'captured' || p.status === 'completed'))
+            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+          const totalUsd = filteredPayments
+            .filter(p => p.currency === 'USD' && (p.status === 'paid' || p.status === 'captured' || p.status === 'completed'))
+            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-6 border-b border-slate-200/60 flex-wrap gap-4">
+                <div>
+                  <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">FINANCIAL LEDGER</span>
+                  <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Payment Dashboard</h1>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-mono font-bold text-emerald-800">
+                    Filtered Paid INR: ₹{totalInr.toLocaleString()}
+                  </div>
+                  {totalUsd > 0 && (
+                    <div className="px-3.5 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs font-mono font-bold text-blue-800">
+                      Filtered Paid USD: ${totalUsd.toLocaleString()}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
-                      <th className="p-4">Customer Name</th>
-                      <th className="p-4">Contact Info</th>
-                      <th className="p-4">Plan / Issue</th>
-                      <th className="p-4">Amount</th>
-                      <th className="p-4">Full Address & Shipping Details</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {dataLoading ? (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">Loading payment records...</td>
+
+              {/* FILTER & SEARCH CONTROL BAR */}
+              <div className="p-4 bg-white border border-[#EAE5D8] rounded-2xl shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                  <span className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-turquoise" />
+                    Filter & Search Transactions
+                  </span>
+                  {(paymentSearch || paymentStatusFilter !== 'all' || paymentDateFilter !== 'all' || paymentPlanFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setPaymentSearch('');
+                        setPaymentStatusFilter('all');
+                        setPaymentDateFilter('all');
+                        setPaymentPlanFilter('all');
+                      }}
+                      className="text-[10px] font-mono text-turquoise hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset All Filters</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={paymentSearch}
+                      onChange={(e) => setPaymentSearch(e.target.value)}
+                      placeholder="Search name, email, phone, order ID..."
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                    />
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                    >
+                      <option value="all">Status: All Statuses</option>
+                      <option value="paid">Status: Paid / Captured</option>
+                      <option value="pending">Status: Pending / Created</option>
+                      <option value="failed">Status: Failed</option>
+                    </select>
+                  </div>
+
+                  {/* Date Range Dropdown */}
+                  <div>
+                    <select
+                      value={paymentDateFilter}
+                      onChange={(e) => setPaymentDateFilter(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                    >
+                      <option value="all">Date: All Time</option>
+                      <option value="today">Date: Today</option>
+                      <option value="7days">Date: Last 7 Days</option>
+                      <option value="30days">Date: Last 30 Days</option>
+                      <option value="90days">Date: Last 90 Days</option>
+                    </select>
+                  </div>
+
+                  {/* Plan Dropdown */}
+                  <div>
+                    <select
+                      value={paymentPlanFilter}
+                      onChange={(e) => setPaymentPlanFilter(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
+                    >
+                      <option value="all">Plan: All Plans</option>
+                      <option value="single">Plan: Print Issue</option>
+                      <option value="digital">Plan: Digital PDF</option>
+                      <option value="subscription">Plan: Membership / Annual</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payments table with full address details */}
+              <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-slate-200/60 bg-slate-50/50 flex justify-between items-center flex-wrap gap-2">
+                  <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">
+                    Transaction Records & Customer Details ({filteredPayments.length} of {paymentsList.length})
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
+                        <th className="p-4">Customer Name</th>
+                        <th className="p-4">Contact Info</th>
+                        <th className="p-4">Plan / Issue</th>
+                        <th className="p-4">Amount</th>
+                        <th className="p-4">Full Address & Shipping Details</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Date</th>
                       </tr>
-                    ) : paymentsList.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">No payment transactions recorded yet.</td>
-                      </tr>
-                    ) : (
-                      paymentsList.map(pay => (
-                        <tr key={pay.id} className="hover:bg-slate-50/60">
-                          <td className="p-4 font-serif font-bold text-midnight font-bold">{pay.name || 'Anonymous'}</td>
-                          <td className="p-4 space-y-0.5">
-                            <p className="font-mono text-[11px] text-slate-700">{pay.email}</p>
-                            <p className="font-mono text-[10px] text-slate-500">{pay.phone}</p>
-                          </td>
-                          <td className="p-4 font-mono text-[10px] uppercase text-[#0B2545] font-bold">
-                            {pay.plan} {pay.selected_issue ? `(${pay.selected_issue})` : ''}
-                          </td>
-                          <td className="p-4 font-mono font-bold text-emerald-700">
-                            {pay.currency === 'USD' ? `$${pay.amount}` : `₹${pay.amount}`}
-                          </td>
-                          <td className="p-4 text-slate-700 max-w-sm space-y-1">
-                            <p className="font-sans font-semibold text-midnight leading-snug whitespace-pre-wrap">{pay.address || pay.shipping_address || 'No street address provided'}</p>
-                            <p className="text-[11px] font-mono text-slate-600 font-medium">
-                              {[pay.house_no, pay.city, pay.pincode, pay.country].filter(Boolean).join(', ')}
-                            </p>
-                          </td>
-                          <td className="p-4">
-                            <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
-                              pay.status === 'captured' || pay.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}>
-                              {pay.status}
-                            </span>
-                          </td>
-                          <td className="p-4 font-mono text-[10px] text-slate-500">
-                            {pay.created_at ? new Date(pay.created_at).toLocaleDateString() : 'N/A'}
-                          </td>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {dataLoading ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">Loading payment records...</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : filteredPayments.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-500 font-mono">No matching payment transactions found.</td>
+                        </tr>
+                      ) : (
+                        filteredPayments.map(pay => (
+                          <tr key={pay.id} className="hover:bg-slate-50/60">
+                            <td className="p-4 font-serif font-bold text-midnight font-bold">{pay.name || 'Anonymous'}</td>
+                            <td className="p-4 space-y-0.5">
+                              <p className="font-mono text-[11px] text-slate-700">{pay.email}</p>
+                              <p className="font-mono text-[10px] text-slate-500">{pay.phone}</p>
+                            </td>
+                            <td className="p-4 font-mono text-[10px] uppercase text-[#0B2545] font-bold">
+                              {pay.plan} {pay.selected_issue ? `(${pay.selected_issue})` : ''}
+                            </td>
+                            <td className="p-4 font-mono font-bold text-emerald-700">
+                              {pay.currency === 'USD' ? `$${pay.amount}` : `₹${pay.amount}`}
+                            </td>
+                            <td className="p-4 text-slate-700 max-w-sm space-y-1">
+                              <p className="font-sans font-semibold text-midnight leading-snug whitespace-pre-wrap">{pay.address || pay.shipping_address || 'No street address provided'}</p>
+                              <p className="text-[11px] font-mono text-slate-600 font-medium">
+                                {[pay.house_no, pay.city, pay.pincode, pay.country].filter(Boolean).join(', ')}
+                              </p>
+                            </td>
+                            <td className="p-4">
+                              <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
+                                pay.status === 'captured' || pay.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {pay.status}
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono text-[10px] text-slate-500">
+                              {pay.created_at ? new Date(pay.created_at).toLocaleDateString() : 'N/A'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {activeTab === 'hero' && (
           <div className="space-y-8">
@@ -1849,7 +2035,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Title</label>
                       <input
                         type="text"
-                        required
                         value={blogTitle}
                         onChange={(e) => setBlogTitle(e.target.value)}
                         placeholder="In Conversation with..."
@@ -1862,7 +2047,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Author</label>
                         <input
                           type="text"
-                          required
                           value={blogAuthor}
                           onChange={(e) => setBlogAuthor(e.target.value)}
                           placeholder="Elena Thorne"
@@ -1873,7 +2057,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Category</label>
                         <input
                           type="text"
-                          required
                           value={blogCategory}
                           onChange={(e) => setBlogCategory(e.target.value)}
                           placeholder="Exhibition / Contemporary"
@@ -1882,28 +2065,19 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Cover Image URL</label>
-                      <div className="flex gap-4 items-center">
-                        <input
-                          type="text"
-                          required
-                          value={blogImage}
-                          onChange={(e) => setBlogImage(e.target.value)}
-                          placeholder="https://images.unsplash.com/photo-..."
-                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                        {blogImage && blogImage.startsWith('http') && (
-                          <img src={blogImage} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
-                        )}
-                      </div>
-                    </div>
+                    <DragDropFileZone
+                      label="Blog Cover Image (Drag & Drop or Select File)"
+                      accept="image/*"
+                      value={blogImage}
+                      onChange={(url) => setBlogImage(url)}
+                      placeholder="Upload cover image or paste direct URL..."
+                      type="image"
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Short Excerpt</label>
                       <input
                         type="text"
-                        required
                         value={blogExcerpt}
                         onChange={(e) => setBlogExcerpt(e.target.value)}
                         placeholder="A short hook sentence to display in grid summaries..."
@@ -1911,16 +2085,51 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Content HTML</label>
-                      <span className="text-[9px] text-slate-500 font-mono block mb-1">HTML tags like &lt;p&gt;, &lt;h2&gt;, &lt;blockquote&gt; will be formatted.</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center flex-wrap gap-2">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">
+                          Article Document Content (Write naturally like a Document / Word file)
+                        </label>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setBlogContent(prev => prev + (prev ? '\n\n## ' : '## ') + 'New Section Heading')}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer"
+                          >
+                            + Heading
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBlogContent(prev => prev + (prev ? '\n\n> ' : '> ') + 'A memorable pull-quote from the essay...')}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer"
+                          >
+                            + Quote
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const imgUrl = prompt('Enter or paste Image URL (or Google Drive link):');
+                              if (imgUrl) {
+                                const directUrl = convertDriveUrl(imgUrl);
+                                setBlogContent(prev => prev + (prev ? '\n\n' : '') + directUrl + '\n\n');
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-turquoise/10 hover:bg-turquoise/20 text-turquoise text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <Images className="w-3 h-3" />
+                            <span>+ Insert Inline Image</span>
+                          </button>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-mono block">
+                        Write paragraphs naturally with linebreaks. No HTML needed! Use <code className="bg-slate-100 px-1 rounded">## Heading</code> for titles and <code className="bg-slate-100 px-1 rounded">&gt; Quote</code> for pull-quotes.
+                      </span>
                       <textarea
-                        required
                         rows={10}
                         value={blogContent}
                         onChange={(e) => setBlogContent(e.target.value)}
-                        placeholder="<p>Write raw HTML content...</p>"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-mono"
+                        placeholder="Type or paste your article content here naturally like in Google Docs...&#10;&#10;Separate paragraphs with double line breaks. Insert image links on their own line."
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans leading-relaxed"
                       />
                     </div>
 
@@ -2000,8 +2209,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                         >
                           <option value="published">Published</option>
-                          <option value="draft">Draft</option>
                           <option value="coming_soon">Coming Soon</option>
+                          <option value="sold">Sold Out</option>
+                          <option value="draft">Draft</option>
                         </select>
                       </div>
                     </div>
@@ -2254,7 +2464,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Artist Name</label>
                         <input
                           type="text"
-                          required
                           value={artName}
                           onChange={(e) => setArtName(e.target.value)}
                           placeholder="Möldir Qarubaiqyzy"
@@ -2280,7 +2489,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Country</label>
                         <input
                           type="text"
-                          required
                           value={artCountry}
                           onChange={(e) => setArtCountry(e.target.value)}
                           placeholder="Kazakhstan / New Delhi, India"
@@ -2291,7 +2499,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Year Born</label>
                         <input
                           type="text"
-                          required
                           value={artBorn}
                           onChange={(e) => setArtBorn(e.target.value)}
                           placeholder="1993"
@@ -2302,7 +2509,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Display Order</label>
                         <input
                           type="number"
-                          required
                           value={artDisplayOrder}
                           onChange={(e) => setArtDisplayOrder(e.target.value)}
                           placeholder="0"
@@ -2311,28 +2517,19 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Portrait Image URL</label>
-                      <div className="flex gap-4 items-center">
-                        <input
-                          type="text"
-                          required
-                          value={artImageUrl}
-                          onChange={(e) => setArtImageUrl(e.target.value)}
-                          placeholder="https://images.unsplash.com/photo-..."
-                          className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
-                        />
-                        {artImageUrl && artImageUrl.startsWith('http') && (
-                          <img src={artImageUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0 bg-slate-100" />
-                        )}
-                      </div>
-                    </div>
+                    <DragDropFileZone
+                      label="Artist Portrait Image (Drag & Drop or Select File)"
+                      accept="image/*"
+                      value={artImageUrl}
+                      onChange={(url) => setArtImageUrl(url)}
+                      placeholder="Upload artist portrait image or paste direct URL / Google Drive link..."
+                      type="image"
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Medium Details</label>
                       <input
                         type="text"
-                        required
                         value={artMedium}
                         onChange={(e) => setArtMedium(e.target.value)}
                         placeholder="Acrylic & Aggregate formulation on linen"
@@ -2340,13 +2537,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       />
                     </div>
 
-
-
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Artist Statement</label>
                       <input
                         type="text"
-                        required
                         value={artStatement}
                         onChange={(e) => setArtStatement(e.target.value)}
                         placeholder="Paint is a living coordinate..."
@@ -2358,7 +2552,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Bio Narrative</label>
                       <textarea
                         rows={4}
-                        required
                         value={artShortBio}
                         onChange={(e) => setArtShortBio(e.target.value)}
                         placeholder="Full bio narrative of the artist..."
@@ -2400,8 +2593,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                         >
                           <option value="Upcoming">Upcoming</option>
-                          <option value="Published">Published</option>
+                          <option value="Current">Current</option>
                           <option value="Completed">Completed</option>
+                          <option value="Past">Past</option>
                           <option value="Draft">Draft</option>
                         </select>
                       </div>

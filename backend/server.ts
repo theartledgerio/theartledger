@@ -680,6 +680,67 @@ app.get('/magazine-download', async (req, res) => {
   }
 });
 
+// Route: send-inquiry
+app.post('/send-inquiry', express.json(), async (req, res) => {
+  try {
+    const { name, email, artist_id, artist_name, message } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    // Save to enquiries table
+    const { error: insertError } = await supabaseAdmin
+      .from('enquiries')
+      .insert({
+        name,
+        email,
+        artist_id: artist_id || null,
+        artist_name: artist_name || null,
+        message: message || '',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.warn('Enquiry database record note:', insertError.message);
+    }
+
+    // Send email to admin via Resend
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + resendApiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            to: [ADMIN_EMAIL],
+            subject: `New Collector Inquiry: ${artist_name || 'General Portfolio'}`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+                <h2 style="font-family: serif; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px;">THE ART LEDGER - COLLECTOR INQUIRY</h2>
+                <p><strong>Collector Name:</strong> ${name}</p>
+                <p><strong>Collector Email:</strong> ${email}</p>
+                <p><strong>Artist / Subject:</strong> ${artist_name || 'General Portfolio'}</p>
+                <p><strong>Message / Requirement:</strong> ${message || 'Acquisition / Exhibition Inquiry'}</p>
+              </div>
+            `
+          })
+        });
+      } catch (e) {
+        console.error('Error sending inquiry email:', e);
+      }
+    }
+
+    return res.status(200).json({ status: 'success', message: 'Inquiry received successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server listening on port ${port}`);
 });

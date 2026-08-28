@@ -42,6 +42,7 @@ interface MagazineEdition {
   editorNote?: string;
   editorName?: string;
   editorImageUrl?: string;
+  status?: string;
 }
 
 interface MagazineSectionProps {
@@ -173,7 +174,7 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
         const { data, error } = await supabase
           .from('magazines')
           .select('*')
-          .eq('status', 'published')
+          .neq('status', 'draft')
           .order('issue_number', { ascending: false });
 
         if (error) throw error;
@@ -209,7 +210,8 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             pages: displayPages,
             editorNote: m.editor_note,
             editorName: m.editor_name,
-            editorImageUrl: m.editor_image_url
+            editorImageUrl: m.editor_image_url,
+            status: m.status || 'published'
           };
         });
 

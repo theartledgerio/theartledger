@@ -65,7 +65,14 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           .map((item, index) => {
             const eventDateStr = item.event_date || item.date || '2026-08-26';
             const isPast = eventDateStr <= todayStr;
-            const computedStatus = (item.status === 'completed' || isPast) ? 'Completed' : (item.status === 'published' ? 'Current' : 'Upcoming');
+            const rawSt = (item.status || '').toLowerCase();
+            let computedStatus: 'Upcoming' | 'Current' | 'Completed' | 'Past' = 'Upcoming';
+            if (rawSt === 'completed') computedStatus = 'Completed';
+            else if (rawSt === 'past') computedStatus = 'Past';
+            else if (rawSt === 'current') computedStatus = 'Current';
+            else if (rawSt === 'upcoming') computedStatus = 'Upcoming';
+            else if (rawSt === 'published') computedStatus = 'Current';
+            else computedStatus = isPast ? 'Completed' : 'Upcoming';
 
             return {
               id: item.id,

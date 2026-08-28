@@ -42,12 +42,12 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
             id: p.id,
             name: p.name,
             style: p.style || 'Artist',
-            country: p.country || 'Global',
-            born: p.born || '1990',
-            medium: p.medium || 'Various Media',
+            country: p.country || '',
+            born: p.born || '',
+            medium: p.medium || '',
             portrait: p.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=600&h=750',
-            bio: p.short_bio || `Renowned practitioner showcasing their unique curatorial language in The Art Ledger registry.`,
-            statement: p.statement || 'Art is the permanent ledger of human sensory and structural evolution.'
+            bio: p.short_bio || '',
+            statement: p.statement || ''
           };
         });
 
@@ -62,9 +62,24 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
     loadArtists();
   }, []);
 
-  const handleSendInquiry = (e: React.FormEvent) => {
+  const handleSendInquiry = async (e: React.FormEvent) => {
     e.preventDefault();
     setInquirySuccess(true);
+
+    try {
+      if (selectedArtist) {
+        await supabase.from('enquiries').insert({
+          name: inquiryName,
+          email: inquiryEmail,
+          artist_id: selectedArtist.id,
+          artist_name: selectedArtist.name,
+          status: 'pending'
+        });
+      }
+    } catch (e) {
+      console.warn('Inquiry insert fallback:', e);
+    }
+
     setTimeout(() => {
       setInquirySuccess(false);
       setInquiryName('');
@@ -205,25 +220,35 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
             {/* Right Side: Editorial Profile */}
             <div className="md:col-span-7 p-6 md:p-12 flex flex-col justify-between bg-warmwhite">
               <div>
-                <div className="flex items-center gap-3 mb-4 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs text-graycustom font-mono">
-                    <MapPin className="w-3.5 h-3.5 text-turquoise" />
-                    {selectedArtist.country}
-                  </span>
-                  <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                  <span className="flex items-center gap-1 text-xs text-graycustom font-mono">
-                    <Calendar className="w-3.5 h-3.5 text-turquoise" />
-                    Born {selectedArtist.born}
-                  </span>
-                </div>
+                {(selectedArtist.country || selectedArtist.born) && (
+                  <div className="flex items-center gap-3 mb-4 flex-wrap">
+                    {selectedArtist.country && (
+                      <span className="flex items-center gap-1 text-xs text-graycustom font-mono">
+                        <MapPin className="w-3.5 h-3.5 text-turquoise" />
+                        {selectedArtist.country}
+                      </span>
+                    )}
+                    {selectedArtist.country && selectedArtist.born && (
+                      <span className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
+                    )}
+                    {selectedArtist.born && (
+                      <span className="flex items-center gap-1 text-xs text-graycustom font-mono">
+                        <Calendar className="w-3.5 h-3.5 text-turquoise" />
+                        Born {selectedArtist.born}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <h3 className="text-4xl font-serif font-bold text-midnight mb-3">
                   {selectedArtist.name}
                 </h3>
 
-                <p className="text-xs font-mono text-turquoise font-bold uppercase tracking-wider mb-8">
-                  {selectedArtist.style}
-                </p>
+                {selectedArtist.style && (
+                  <p className="text-xs font-mono text-turquoise font-bold uppercase tracking-wider mb-8">
+                    {selectedArtist.style}
+                  </p>
+                )}
 
                 {/* Metadata boxes */}
                 <div className="grid grid-cols-2 gap-4 py-4 px-5 bg-white rounded-2xl mb-8 border border-[#EAE5D8]/60">
@@ -232,7 +257,7 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                       PRIMARY MEDIUMS
                     </span>
                     <span className="text-xs font-sans font-semibold text-midnight">
-                      {selectedArtist.medium}
+                      {selectedArtist.medium || 'Fine Art / Contemporary'}
                     </span>
                   </div>
                   <div>
@@ -246,21 +271,25 @@ export default function FeaturedArtists({ searchQuery, onChangePage, isHome = tr
                 </div>
 
                 <div className="space-y-6 text-sm text-graycustom leading-relaxed">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider font-sans text-midnight block mb-2">
-                      Biography
-                    </span>
-                    <p className="font-medium text-xs leading-relaxed">{selectedArtist.bio}</p>
-                  </div>
+                  {selectedArtist.bio && (
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider font-sans text-midnight block mb-2">
+                        Biography
+                      </span>
+                      <p className="font-medium text-xs leading-relaxed">{selectedArtist.bio}</p>
+                    </div>
+                  )}
 
-                  <div className="border-t border-[#EAE5D8] pt-6">
-                    <span className="text-xs font-bold uppercase tracking-wider font-sans text-midnight block mb-2">
-                      Artist Statement
-                    </span>
-                    <p className="italic font-serif text-slate-700 pl-4 border-l-2 border-turquoise font-medium text-sm leading-relaxed">
-                      "{selectedArtist.statement}"
-                    </p>
-                  </div>
+                  {selectedArtist.statement && (
+                    <div className="border-t border-[#EAE5D8] pt-6">
+                      <span className="text-xs font-bold uppercase tracking-wider font-sans text-midnight block mb-2">
+                        Artist Statement
+                      </span>
+                      <p className="italic font-serif text-slate-700 pl-4 border-l-2 border-turquoise font-medium text-sm leading-relaxed">
+                        "{selectedArtist.statement}"
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
