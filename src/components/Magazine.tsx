@@ -185,17 +185,10 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
             previewPages = m.preview_pages.filter((p: string) => typeof p === 'string' && p.trim().length > 0);
           }
 
-          // Prioritize uploaded preview pages page-by-page, filling defaults only for empty slots
-          const samplePages = [
-            m.cover_image_url || '/blog1/1.png',
-            '/blog1/2.png',
-            '/blog1/3.png',
-            '/blog1/4.png',
-            '/blog1/5.png',
-            '/blog1/6.png'
-          ];
-          
-          const displayPages: string[] = samplePages.map((def, idx) => previewPages[idx] || def);
+          // Show only images actually uploaded by admin (or cover image if none uploaded)
+          const displayPages: string[] = previewPages.length > 0
+            ? previewPages
+            : (m.cover_image_url ? [m.cover_image_url] : ['/blog1/1.png']);
 
           return {
             id: m.id,
@@ -545,9 +538,21 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
           {/* Left Column: Info and Buy Button */}
           <div className="order-2 lg:order-1 lg:col-span-7 space-y-8 mt-6 lg:mt-0">
             <div className="space-y-4">
-              <span className="text-[10px] font-mono tracking-[0.18em] text-midnight font-bold uppercase block">
-                {activeIssue.season.toUpperCase()}
-              </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[10px] font-mono tracking-[0.18em] text-midnight font-bold uppercase block">
+                  {activeIssue.season.toUpperCase()}
+                </span>
+                {activeIssue.status === 'coming_soon' && (
+                  <span className="px-3 py-1 rounded-full bg-amber-500 text-white font-mono text-[10px] font-bold uppercase tracking-wider shadow-sm animate-pulse">
+                    ⏳ COMING SOON
+                  </span>
+                )}
+                {activeIssue.status === 'sold' && (
+                  <span className="px-3 py-1 rounded-full bg-rose-600 text-white font-mono text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    SOLD OUT
+                  </span>
+                )}
+              </div>
               <h2 className="text-5xl md:text-8xl font-serif font-bold text-midnight tracking-tight leading-none">
                 {activeIssue.issueNumber.replace('Issue No. ', 'No. ')}
               </h2>
@@ -822,6 +827,20 @@ export default function MagazineSection({ isHome = false, onChangePage, user = n
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
+                      {issue.status === 'coming_soon' && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="px-2.5 py-1 rounded-full bg-amber-500 text-white font-mono text-[9px] font-bold uppercase shadow-md tracking-wider">
+                            COMING SOON
+                          </span>
+                        </div>
+                      )}
+                      {issue.status === 'sold' && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white font-mono text-[9px] font-bold uppercase shadow-md tracking-wider">
+                            SOLD OUT
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute top-2 right-2 z-10">
                         {isAdminUser || purchasedMagIds.includes(issue.id) ? (
                           <span className="p-1.5 rounded-full bg-emerald-500/90 text-white backdrop-blur-md inline-flex shadow-sm" title="Digital Edition Unlocked">

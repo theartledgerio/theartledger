@@ -91,11 +91,11 @@ export default function Hero({ onChangePage }: HeroProps) {
         const blogTitle = prajaktaBlog?.title || 'In Conversation with Prajakta Potnis';
         const blogSubtitle = prajaktaBlog?.short_description || 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.';
 
-        // 2. Fetch latest published magazine edition
+        // 2. Fetch latest published or coming soon magazine edition
         const { data: magData } = await supabase
           .from('magazines')
-          .select('issue_number, issue_name, cover_image_url, tagline, short_summary')
-          .eq('status', 'published')
+          .select('issue_number, issue_name, cover_image_url, tagline, short_summary, status')
+          .neq('status', 'draft')
           .order('issue_number', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -155,7 +155,9 @@ export default function Hero({ onChangePage }: HeroProps) {
             id: 'hero-magazine',
             media_type: 'image',
             media_url: magData?.cover_image_url || DEFAULT_3_HERO_CARDS[1].media_url,
-            badge: `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 42}`,
+            badge: magData?.status === 'coming_soon'
+              ? `COMING SOON // ISSUE NO. ${magData?.issue_number || 42}`
+              : `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 42}`,
             title: magData?.issue_name || 'The Digital Renaissance',
             subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining new media art.',
             link_page: 'magazine',

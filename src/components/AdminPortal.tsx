@@ -45,12 +45,12 @@ export const convertDriveUrl = (url: string): string => {
 // Drag and Drop File Upload Component for Admin Forms
 const DragDropFileZone: React.FC<{
   label: string;
-  accept: string;
+  accept?: string;
   value: string;
   onChange: (url: string) => void;
   onFileSelect?: (file: File) => void;
   placeholder?: string;
-  type?: 'image' | 'pdf';
+  type?: 'image' | 'pdf' | 'video';
 }> = ({ label, accept, value, onChange, onFileSelect, placeholder, type = 'image' }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -74,7 +74,10 @@ const DragDropFileZone: React.FC<{
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const bucketName = 'blog-images';
       
-      const { error } = await supabase.storage.from(bucketName).upload(fileName, file);
+      const { error } = await supabase.storage.from(bucketName).upload(fileName, file, {
+        contentType: file.type || undefined,
+        upsert: true
+      });
       if (!error) {
         const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
         onChange(data.publicUrl);
@@ -118,6 +121,12 @@ const DragDropFileZone: React.FC<{
     }
   };
 
+  const defaultAccept = type === 'video'
+    ? "video/*,.mp4,.webm,.mov,.avi,.mkv"
+    : type === 'pdf'
+    ? "application/pdf"
+    : "image/*,.png,.jpg,.jpeg,.webp,.svg,.gif,.bmp,.tiff";
+
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">{label}</label>
@@ -131,7 +140,7 @@ const DragDropFileZone: React.FC<{
       >
         <input
           type="file"
-          accept={accept || (type === 'image' ? "image/*,.png,.jpg,.jpeg,.webp,.svg,.gif,.bmp,.tiff" : "application/pdf")}
+          accept={accept || defaultAccept}
           onChange={handleFileInput}
           disabled={isUploading}
           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
@@ -160,8 +169,11 @@ const DragDropFileZone: React.FC<{
           placeholder={placeholder || 'Or paste direct URL / Google Drive link...'}
           className="flex-grow px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
         />
-        {type === 'image' && value && value.startsWith('http') && (
+        {type === 'image' && value && (value.startsWith('http') || value.startsWith('data:image')) && (
           <img src={value} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-100" />
+        )}
+        {type === 'video' && value && (value.startsWith('http') || value.startsWith('data:video')) && (
+          <video src={value} className="w-14 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-black" autoPlay loop muted playsInline />
         )}
       </div>
     </div>
@@ -618,19 +630,17 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   };
 
   // File Upload Handler for Blog Manuscripts
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
         setBlogDocument({
           fileName: file.name,
           fileType: file.type || 'text/plain',
-          fileData: text,
           textPreview: text
         });
         if (!blogContent || blogContent.trim() === '') {
@@ -638,20 +648,42 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         }
       };
       reader.readAsText(file);
-    } else {
-      reader.onload = (event) => {
-        setBlogDocument({
-          fileName: file.name,
-          fileType: file.type,
-          fileData: event.target?.result as string,
-          textPreview: file.type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc')
-            ? 'Word Document Manuscript Loaded. Ready for editorial review.'
-            : file.type === 'application/pdf'
-            ? 'PDF Document Loaded. Preview available.'
-            : 'Document Loaded.'
-        });
-      };
-      reader.readAsDataURL(file);
+      return;
+    }
+
+    try {
+      triggerToast('Uploading manuscript document...');
+      const fileExt = file.name.split('.').pop() || 'file';
+      const fileName = `manuscript_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      let publicUrl = '';
+
+      const { error: uploadErr } = await supabase.storage
+        .from('blog-images')
+        .upload(fileName, file, { contentType: file.type || undefined, upsert: true });
+
+      if (!uploadErr) {
+        const { data } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+        publicUrl = data.publicUrl;
+      }
+
+      setBlogDocument({
+        fileName: file.name,
+        fileType: file.type || 'application/octet-stream',
+        fileUrl: publicUrl || '',
+        textPreview: file.type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc')
+          ? 'Word Document Manuscript Loaded. Ready for editorial review.'
+          : file.type === 'application/pdf'
+          ? 'PDF Document Loaded. Preview available.'
+          : 'Document Loaded.'
+      });
+      triggerToast('Manuscript document attached!');
+    } catch (err: any) {
+      console.error('Error processing manuscript file:', err);
+      setBlogDocument({
+        fileName: file.name,
+        fileType: file.type || 'application/octet-stream',
+        textPreview: 'Document attached.'
+      });
     }
   };
 
@@ -709,11 +741,38 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
         if (formMode === 'create') {
           const { error } = await supabase.from('blog_submissions').insert([payload]);
-          if (error) throw error;
+          if (error) {
+            // Fallback to core payload if optional metadata columns differ in schema
+            const corePayload = {
+              title: payload.title,
+              short_description: payload.short_description,
+              content: payload.content,
+              image_url: payload.image_url,
+              name: payload.name,
+              category: payload.category,
+              status: payload.status,
+              published_at: payload.published_at
+            };
+            const { error: coreErr } = await supabase.from('blog_submissions').insert([corePayload]);
+            if (coreErr) throw coreErr;
+          }
           triggerToast('Blog post created successfully!');
         } else {
           const { error } = await supabase.from('blog_submissions').update(payload).eq('id', editingId);
-          if (error) throw error;
+          if (error) {
+            const corePayload = {
+              title: payload.title,
+              short_description: payload.short_description,
+              content: payload.content,
+              image_url: payload.image_url,
+              name: payload.name,
+              category: payload.category,
+              status: payload.status,
+              published_at: payload.published_at
+            };
+            const { error: coreErr } = await supabase.from('blog_submissions').update(corePayload).eq('id', editingId);
+            if (coreErr) throw coreErr;
+          }
           triggerToast('Blog post updated successfully!');
         }
       } else if (formType === 'magazine') {
@@ -2776,11 +2835,11 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
                     <DragDropFileZone
                       label={heroMediaType === 'video' ? "Upload Video File or Paste Video URL" : "Upload Image File or Paste Image URL"}
-                      accept={heroMediaType === 'video' ? "video/*" : "image/*"}
+                      accept={heroMediaType === 'video' ? "video/*,.mp4,.webm,.mov,.avi,.mkv" : "image/*"}
                       value={heroMediaUrl}
                       onChange={(url) => setHeroMediaUrl(url)}
                       placeholder={heroMediaType === 'video' ? "https://cdn.example.com/art-clip.mp4" : "https://images.unsplash.com/photo-..."}
-                      type="image"
+                      type={heroMediaType}
                     />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
