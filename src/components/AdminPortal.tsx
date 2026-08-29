@@ -15,6 +15,7 @@ import {
 import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
 import { API_BASE_URL } from '../config';
+import mammoth from 'mammoth';
 
 interface AdminPortalProps {
   onChangePage?: (pageId: string) => void;
@@ -40,6 +41,53 @@ export const convertDriveUrl = (url: string): string => {
     }
   }
   return trimmed;
+};
+
+const renderBlogPreviewContent = (text: string) => {
+  if (!text || text.trim() === '') {
+    return <p className="text-slate-400 italic text-center py-6">No article content written yet...</p>;
+  }
+
+  const paragraphs = text.split(/\n\s*\n/);
+  return paragraphs.map((block, idx) => {
+    const trimmed = block.trim();
+    if (!trimmed) return null;
+
+    if (trimmed.startsWith('## ')) {
+      return (
+        <h2 key={idx} className="text-xl md:text-2xl font-serif font-bold text-midnight mt-6 mb-3">
+          {trimmed.replace(/^##\s*/, '')}
+        </h2>
+      );
+    }
+    if (trimmed.startsWith('> ')) {
+      return (
+        <blockquote key={idx} className="my-6 pl-4 border-l-2 border-turquoise font-serif italic text-midnight text-sm bg-slate-50 py-3 px-4 rounded-r-xl">
+          "{trimmed.replace(/^>\s*/, '')}"
+        </blockquote>
+      );
+    }
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
+      const isImg = trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('lh3.googleusercontent.com') || trimmed.includes('unsplash.com');
+      if (isImg) {
+        return (
+          <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[450px] object-cover" />
+          </div>
+        );
+      }
+    }
+    if (trimmed.startsWith('<img')) {
+      return (
+        <div key={idx} dangerouslySetInnerHTML={{ __html: trimmed }} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm" />
+      );
+    }
+    return (
+      <p key={idx} className="mb-4 text-xs md:text-sm text-slate-700 leading-relaxed font-sans">
+        {trimmed}
+      </p>
+    );
+  });
 };
 
 // Drag and Drop File Upload Component for Admin Forms
@@ -254,6 +302,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [blogAuthor, setBlogAuthor] = useState('');
   const [blogCategory, setBlogCategory] = useState('');
   const [blogStatus, setBlogStatus] = useState('approved');
+  const [blogFormTab, setBlogFormTab] = useState<'edit' | 'preview'>('edit');
 
   // 2. Magazine
   const [magIssueNumber, setMagIssueNumber] = useState('');
@@ -436,16 +485,34 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         setEventsList(hasFreedom ? list : [freedomDefault, ...list]);
       }
       if (activeTab === 'hero' || activeTab === 'dashboard') {
-        const localSaved = localStorage.getItem('tal_hero_cards');
-        if (localSaved) {
-          try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
-        } else {
-          setHeroList([
-            { id: 'card-1', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200', badge: 'ESSAY // CONTEMPORARY', title: 'In Conversation with Prajakta Potnis', subtitle: 'Exploring contemporary sculpture and post-colonial motifs.', link_page: 'blogs', link_text: 'Read Full Essay' },
-            { id: 'card-2', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200', badge: 'EXHIBITION REVIEW', title: 'The Many Worlds of India\'s Tribal Art', subtitle: 'A curatorial deep-dive into indigenous craftsmanship.', link_page: 'events', link_text: 'View Exhibition' },
-            { id: 'card-3', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200', badge: 'LATEST ISSUE // NO. 42', title: 'The Digital Renaissance', subtitle: 'Special quarterly print release.', link_page: 'magazine', link_text: 'Explore Issue' },
-            { id: 'card-4', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=1200', badge: 'FEATURED ARTIST', title: 'Lorem ipsum dolor sit amet', subtitle: 'Monolithic forms in modern fine art commentary.', link_page: 'artists', link_text: 'Browse Roster' }
-          ]);
+        try {
+          const { data: settings } = await supabase
+            .from('site_settings')
+            .select('hero_slides')
+            .limit(1)
+            .maybeSingle();
+
+          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+            setHeroList(settings.hero_slides);
+            localStorage.setItem('tal_hero_cards', JSON.stringify(settings.hero_slides));
+          } else {
+            const localSaved = localStorage.getItem('tal_hero_cards');
+            if (localSaved) {
+              try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
+            } else {
+              setHeroList([
+                { id: 'card-1', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200', badge: 'ESSAY // CONTEMPORARY', title: 'In Conversation with Prajakta Potnis', subtitle: 'Exploring contemporary sculpture and post-colonial motifs.', link_page: 'blogs', link_text: 'Read Full Essay' },
+                { id: 'card-2', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200', badge: 'EXHIBITION REVIEW', title: 'The Many Worlds of India\'s Tribal Art', subtitle: 'A curatorial deep-dive into indigenous craftsmanship.', link_page: 'events', link_text: 'View Exhibition' },
+                { id: 'card-3', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200', badge: 'LATEST ISSUE // NO. 42', title: 'The Digital Renaissance', subtitle: 'Special quarterly print release.', link_page: 'magazine', link_text: 'Explore Issue' },
+                { id: 'card-4', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=1200', badge: 'FEATURED ARTIST', title: 'Lorem ipsum dolor sit amet', subtitle: 'Monolithic forms in modern fine art commentary.', link_page: 'artists', link_text: 'Browse Roster' }
+              ]);
+            }
+          }
+        } catch (e) {
+          const localSaved = localStorage.getItem('tal_hero_cards');
+          if (localSaved) {
+            try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
+          }
         }
       }
       if (activeTab === 'dashboard') {
@@ -547,6 +614,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     setEditingId(item ? item.id : null);
 
     if (type === 'blog') {
+      setBlogFormTab('edit');
       setBlogTitle(item ? item.title : '');
       setBlogExcerpt(item ? item.short_description || '' : '');
       setBlogContent(item ? item.content || '' : '');
@@ -637,17 +705,71 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const text = event.target?.result as string;
+        const text = (event.target?.result as string) || '';
         setBlogDocument({
           fileName: file.name,
           fileType: file.type || 'text/plain',
           textPreview: text
         });
-        if (!blogContent || blogContent.trim() === '') {
-          setBlogContent(text);
+
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0) {
+          const firstLine = lines[0].replace(/^#+\s*/, '');
+          setBlogTitle(prev => prev ? prev : firstLine);
+          if (lines.length > 1) {
+            setBlogExcerpt(prev => prev ? prev : lines[1]);
+          }
+          setBlogContent(prev => prev ? prev : text);
         }
+        triggerToast('Text manuscript content imported & populated!');
       };
       reader.readAsText(file);
+      return;
+    }
+
+    if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+      try {
+        triggerToast('Extracting Word document & inline images...');
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Convert to HTML preserving embedded inline images from Word
+        const htmlResult = await mammoth.convertToHtml(
+          { arrayBuffer },
+          {
+            convertImage: mammoth.images.imgElement((image) => {
+              return image.read('base64').then((imageBuffer) => {
+                return {
+                  src: `data:${image.contentType};base64,${imageBuffer}`
+                };
+              });
+            })
+          }
+        );
+
+        const rawTextResult = await mammoth.extractRawText({ arrayBuffer });
+        const extractedText = (rawTextResult.value || '').trim();
+        const extractedHtml = (htmlResult.value || '').trim();
+
+        setBlogDocument({
+          fileName: file.name,
+          fileType: file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          textPreview: extractedText.substring(0, 300) + '...'
+        });
+
+        const lines = extractedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0) {
+          const firstLine = lines[0].replace(/^#+\s*/, '');
+          setBlogTitle(prev => prev ? prev : firstLine);
+          if (lines.length > 1) {
+            setBlogExcerpt(prev => prev ? prev : lines[1]);
+          }
+        }
+        setBlogContent(prev => prev ? prev : (extractedHtml || extractedText));
+        triggerToast('Word manuscript & embedded images extracted!');
+      } catch (err: any) {
+        console.error('Docx extraction error:', err);
+        triggerToast('Word document uploaded as attachment');
+      }
       return;
     }
 
@@ -670,11 +792,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         fileName: file.name,
         fileType: file.type || 'application/octet-stream',
         fileUrl: publicUrl || '',
-        textPreview: file.type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc')
-          ? 'Word Document Manuscript Loaded. Ready for editorial review.'
-          : file.type === 'application/pdf'
-          ? 'PDF Document Loaded. Preview available.'
-          : 'Document Loaded.'
+        textPreview: 'Document Attached'
       });
       triggerToast('Manuscript document attached!');
     } catch (err: any) {
@@ -684,6 +802,32 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         fileType: file.type || 'application/octet-stream',
         textPreview: 'Document attached.'
       });
+    }
+  };
+
+  // Upload inline images directly to Supabase storage and insert into blog body
+  const handleInlineImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      triggerToast('Uploading inline image...');
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `inline_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('blog-images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+      if (data?.publicUrl) {
+        setBlogContent(prev => prev + (prev ? '\n\n' : '') + data.publicUrl + '\n\n');
+        triggerToast('Inline image inserted into article!');
+      }
+    } catch (err: any) {
+      console.error('Error uploading inline image:', err);
+      triggerToast(`Inline image upload failed: ${err.message}`);
     }
   };
 
@@ -727,12 +871,16 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     setLoading(true);
     try {
       if (formType === 'blog') {
+        const { data: { user } } = await supabase.auth.getUser();
+        const authorEmail = user?.email || 'editorial@theartledger.io';
+
         const payload = {
           title: blogTitle || 'Untitled Blog',
           short_description: blogExcerpt || '',
           content: blogContent || '',
           image_url: convertDriveUrl(blogImage),
           name: blogAuthor || 'Editorial Board',
+          email: authorEmail,
           category: blogCategory || 'Editorial',
           status: blogStatus || 'approved',
           published_at: new Date().toISOString(),
@@ -749,6 +897,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               content: payload.content,
               image_url: payload.image_url,
               name: payload.name,
+              email: payload.email,
               category: payload.category,
               status: payload.status,
               published_at: payload.published_at
@@ -766,6 +915,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               content: payload.content,
               image_url: payload.image_url,
               name: payload.name,
+              email: payload.email,
               category: payload.category,
               status: payload.status,
               published_at: payload.published_at
@@ -892,13 +1042,20 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           triggerToast('Event updated successfully!');
         }
       } else if (formType === 'hero') {
+        const isVid = heroMediaType === 'video' || (heroMediaUrl && (
+          heroMediaUrl.toLowerCase().includes('.mp4') ||
+          heroMediaUrl.toLowerCase().includes('.webm') ||
+          heroMediaUrl.toLowerCase().includes('.mov') ||
+          heroMediaUrl.toLowerCase().includes('video')
+        ));
+
         const cardObj = {
           id: editingId || `card-${Date.now()}`,
           badge: heroBadge || 'FEATURED STATEMENT',
           title: heroTitle || 'Untitled Card',
           subtitle: heroSubtitle || '',
           media_url: heroMediaUrl || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
-          media_type: heroMediaType || 'image',
+          media_type: (isVid ? 'video' : 'image') as 'image' | 'video',
           link_page: heroLinkPage || 'blogs',
           link_text: heroLinkText || 'Explore'
         };
@@ -913,8 +1070,15 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         setHeroList(updated);
         localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
         try {
-          await supabase.from('site_settings').upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
-        } catch (e) {}
+          const { error: settingsErr } = await supabase
+            .from('site_settings')
+            .upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
+          if (settingsErr) {
+            console.error('Error saving hero_slides to site_settings:', settingsErr);
+          }
+        } catch (e) {
+          console.error('Database save error:', e);
+        }
         triggerToast('Hero Deck card saved successfully!');
       }
 
@@ -2075,11 +2239,33 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               <div className="px-8 py-5 border-b border-slate-200/60 flex justify-between items-center bg-slate-900">
                 <div>
                   <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block">{formMode} Registry</span>
-                  <h3 className="text-xl font-serif font-bold text-midnight capitalize">{formType} Entry</h3>
+                  <h3 className="text-xl font-serif font-bold text-white capitalize">{formType} Entry</h3>
                 </div>
+                {formType === 'blog' && (
+                  <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+                    <button
+                      type="button"
+                      onClick={() => setBlogFormTab('edit')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        blogFormTab === 'edit' ? 'bg-turquoise text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ✍️ Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlogFormTab('preview')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        blogFormTab === 'preview' ? 'bg-turquoise text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      👁️ Live Preview
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={() => setShowFormModal(false)}
-                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 hover:text-midnight"
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -2088,7 +2274,46 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
               {/* Scrollable form body */}
               <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-8 space-y-5 no-scrollbar">
                 
-                {formType === 'blog' && (
+                {formType === 'blog' && blogFormTab === 'preview' && (
+                  <div className="space-y-6 bg-slate-50/70 p-6 rounded-2xl border border-slate-200">
+                    <div className="space-y-3 text-center border-b border-slate-200 pb-6">
+                      <span className="inline-block px-3 py-1 bg-turquoise/10 text-turquoise text-[10px] font-mono font-bold uppercase tracking-widest rounded-full">
+                        {blogCategory || 'EDITORIAL / ESSAY'}
+                      </span>
+                      <h1 className="text-2xl md:text-3xl font-serif font-bold text-midnight leading-tight">
+                        {blogTitle || 'Untitled Blog Post'}
+                      </h1>
+                      {blogExcerpt && (
+                        <p className="text-xs md:text-sm font-serif italic text-slate-600 max-w-xl mx-auto">
+                          {blogExcerpt}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-center gap-3 text-[10px] font-mono text-slate-500 pt-2">
+                        <span>By {blogAuthor || 'Editorial Board'}</span>
+                        <span>•</span>
+                        <span>{Math.max(1, Math.ceil((blogContent ? blogContent.split(/\s+/).length : 0) / 200))} min read</span>
+                        <span>•</span>
+                        <span className="text-turquoise font-bold uppercase">Live Preview</span>
+                      </div>
+                    </div>
+
+                    {blogImage && (
+                      <div className="rounded-2xl overflow-hidden shadow-md max-h-[320px]">
+                        <img
+                          src={convertDriveUrl(blogImage)}
+                          alt="Cover Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="prose max-w-none text-midnight space-y-4 pt-2">
+                      {renderBlogPreviewContent(blogContent)}
+                    </div>
+                  </div>
+                )}
+
+                {formType === 'blog' && blogFormTab === 'edit' && (
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Title</label>
@@ -2164,6 +2389,20 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                           >
                             + Quote
                           </button>
+                          <label
+                            htmlFor="inline-blog-img-input"
+                            className="px-2.5 py-1 bg-turquoise/10 hover:bg-turquoise/20 text-turquoise text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <Images className="w-3 h-3" />
+                            <span>+ Upload & Insert Image</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleInlineImageUpload}
+                              className="hidden"
+                              id="inline-blog-img-input"
+                            />
+                          </label>
                           <button
                             type="button"
                             onClick={() => {
@@ -2173,10 +2412,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                                 setBlogContent(prev => prev + (prev ? '\n\n' : '') + directUrl + '\n\n');
                               }
                             }}
-                            className="px-2.5 py-1 bg-turquoise/10 hover:bg-turquoise/20 text-turquoise text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer"
                           >
-                            <Images className="w-3 h-3" />
-                            <span>+ Insert Inline Image</span>
+                            + URL Link
                           </button>
                         </div>
                       </div>

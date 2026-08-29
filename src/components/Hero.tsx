@@ -56,6 +56,13 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   }
 ];
 
+const checkIsVideo = (card: HeroDeckCard) => {
+  if (card?.media_type === 'video') return true;
+  if (!card?.media_url) return false;
+  const lower = card.media_url.toLowerCase();
+  return lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov') || lower.endsWith('.m4v') || lower.includes('video') || lower.includes('/videos/');
+};
+
 export default function Hero({ onChangePage }: HeroProps) {
   const [cards, setCards] = useState<HeroDeckCard[]>(DEFAULT_3_HERO_CARDS);
   const [activeIndex, setActiveIndex] = useState<number>(0);
@@ -122,16 +129,33 @@ export default function Hero({ onChangePage }: HeroProps) {
         const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
         const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
-        // Check if custom slides were explicitly configured in Admin
-        const localSaved = localStorage.getItem('tal_hero_cards');
+        // Check if custom slides were explicitly configured in DB site_settings or localStorage
         let customDeck: HeroDeckCard[] | null = null;
-        if (localSaved) {
-          try {
-            const parsed = JSON.parse(localSaved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              customDeck = parsed; // Allow any number of custom cards
-            }
-          } catch (e) {}
+
+        try {
+          const { data: settings } = await supabase
+            .from('site_settings')
+            .select('hero_slides')
+            .limit(1)
+            .maybeSingle();
+
+          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+            customDeck = settings.hero_slides;
+          }
+        } catch (e) {
+          console.error('Error fetching site_settings hero_slides:', e);
+        }
+
+        if (!customDeck) {
+          const localSaved = localStorage.getItem('tal_hero_cards');
+          if (localSaved) {
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                customDeck = parsed;
+              }
+            } catch (e) {}
+          }
         }
 
         if (customDeck && customDeck.length > 0) {
@@ -278,7 +302,7 @@ export default function Hero({ onChangePage }: HeroProps) {
                   }}
                 >
                   {/* Media Background (Image or Video) */}
-                  {card.media_type === 'video' ? (
+                  {checkIsVideo(card) ? (
                     <video
                       ref={(el) => { videoRefs.current[card.id] = el; }}
                       src={card.media_url}
@@ -372,7 +396,7 @@ export default function Hero({ onChangePage }: HeroProps) {
               >
                 {/* Card Media Background */}
                 <div className="absolute inset-0 bg-slate-900 overflow-hidden">
-                  {card.media_type === 'video' ? (
+                  {checkIsVideo(card) ? (
                     <video
                       ref={(el) => { videoRefs.current[card.id] = el; }}
                       src={card.media_url}
