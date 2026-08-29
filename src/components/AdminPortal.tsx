@@ -82,8 +82,8 @@ const renderBlogPreviewContent = (text: string) => {
         
       if (isImg) {
         return (
-          <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[500px] object-cover" />
+          <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex justify-center bg-slate-50/50">
+            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[550px] object-contain rounded-2xl" />
           </div>
         );
       }

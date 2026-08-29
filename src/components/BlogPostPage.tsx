@@ -165,8 +165,8 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
 
         {/* Cover Image */}
         {blog.image && !(blog.content || '').includes(blog.image) && (
-          <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg">
-            <img src={blog.image} alt={blog.title} className="w-full h-auto object-cover max-h-[60vh]" />
+          <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg flex justify-center bg-slate-50/50">
+            <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain max-h-[70vh] rounded-2xl" />
           </div>
         )}
 
@@ -281,11 +281,11 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
 
                 if (
                   (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) &&
-                  (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('googleusercontent.com') || trimmed.includes('unsplash.com') || trimmed.startsWith('data:image/'))
+                  (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('googleusercontent.com') || trimmed.includes('unsplash.com') || trimmed.includes('supabase.co') || trimmed.startsWith('data:image/'))
                 ) {
                   return (
-                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8]">
-                      <img src={trimmed} alt="Article Image" className="w-full h-auto object-cover max-h-[70vh]" />
+                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8] flex justify-center bg-slate-50/30">
+                      <img src={trimmed} alt="Article Image" className="w-full h-auto object-contain max-h-[75vh] rounded-2xl" />
                     </div>
                   );
                 }
