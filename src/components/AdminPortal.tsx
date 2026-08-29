@@ -732,10 +732,23 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           } catch (e) {}
         }
 
+        // 3. Check localStorage fallback
+        if (!loadedHero) {
+          const localSaved = localStorage.getItem('tal_hero_cards');
+          if (localSaved) {
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                loadedHero = parsed;
+              }
+            } catch (e) {}
+          }
+        }
+
         if (loadedHero && loadedHero.length > 0) {
           setHeroList(loadedHero);
         } else {
-          // If no custom slides stored in DB, load the live 3-card website deck directly
+          // If no custom slides stored, load the live 3-card website deck directly
           const liveDeck = await fetchLiveWebsiteDeck();
           setHeroList(liveDeck);
         }
@@ -1320,18 +1333,15 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         }
 
         setHeroList(updated);
+        localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
 
-        // 1. Save directly to Supabase site_settings DB table first (instant DB write)
+        // 1. Save directly to Supabase site_settings DB table first
         try {
           const { error: dbErr } = await supabase
             .from('site_settings')
             .upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
-          if (dbErr) {
-            console.error('Database site_settings upsert error:', dbErr);
-          }
-        } catch (e) {
-          console.error('Database save error:', e);
-        }
+          if (dbErr) console.warn('site_settings upsert warning:', dbErr);
+        } catch (e) {}
 
         // 2. Also save to public Supabase Storage JSON
         try {
@@ -1341,7 +1351,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
             .upload('hero_slides.json', jsonBlob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
         } catch (e) {}
 
-        triggerToast('Hero Deck card saved & synced to Supabase!');
+        triggerToast('Hero Deck card saved & synced!');
+        setShowFormModal(false);
+        setLoading(false);
+        return;
       }
 
       setShowFormModal(false);

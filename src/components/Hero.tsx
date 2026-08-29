@@ -161,6 +161,19 @@ export default function Hero({ onChangePage }: HeroProps) {
           } catch (e) {}
         }
 
+        // 3. Fallback to localStorage
+        if (!customDeck) {
+          const localSaved = localStorage.getItem('tal_hero_cards');
+          if (localSaved) {
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                customDeck = parsed;
+              }
+            } catch (e) {}
+          }
+        }
+
         if (customDeck && customDeck.length > 0) {
           setCards(customDeck);
           return;
