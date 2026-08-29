@@ -90,6 +90,59 @@ const renderBlogPreviewContent = (text: string) => {
   });
 };
 
+export const cleanWordHtmlToMarkdown = (html: string): string => {
+  if (!html) return '';
+  if (!html.includes('<')) {
+    return html.split(/\r?\n/).map(l => l.trim()).filter(Boolean).join('\n\n');
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const blocks: string[] = [];
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === 'h1' || tag === 'h2') {
+        const txt = el.textContent?.trim();
+        if (txt) blocks.push(`## ${txt}`);
+      } else if (tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
+        const txt = el.textContent?.trim();
+        if (txt) blocks.push(`### ${txt}`);
+      } else if (tag === 'blockquote') {
+        const txt = el.textContent?.trim();
+        if (txt) blocks.push(`> ${txt}`);
+      } else if (tag === 'img') {
+        const src = el.getAttribute('src');
+        if (src) blocks.push(src);
+      } else if (tag === 'p' || tag === 'div' || tag === 'li') {
+        const imgs = el.querySelectorAll('img');
+        if (imgs.length > 0) {
+          imgs.forEach(img => {
+            const src = img.getAttribute('src');
+            if (src) blocks.push(src);
+          });
+        }
+        const txt = el.textContent?.trim();
+        if (txt) blocks.push(txt);
+      } else {
+        Array.from(el.childNodes).forEach(walk);
+      }
+    }
+  };
+
+  Array.from(doc.body.childNodes).forEach(walk);
+
+  if (blocks.length === 0) {
+    return doc.body.textContent?.trim() || html;
+  }
+
+  const cleanBlocks = blocks.filter((b, i, arr) => b && (i === 0 || b !== arr[i - 1]));
+  return cleanBlocks.join('\n\n');
+};
+
 // Drag and Drop File Upload Component for Admin Forms
 const DragDropFileZone: React.FC<{
   label: string;
@@ -770,8 +823,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
             setBlogExcerpt(prev => prev ? prev : lines[1]);
           }
         }
-        setBlogContent(prev => prev ? prev : (extractedHtml || extractedText));
-        triggerToast('Word manuscript & embedded images extracted!');
+        const cleanFormattedContent = cleanWordHtmlToMarkdown(extractedHtml || extractedText);
+        setBlogContent(prev => prev ? prev : cleanFormattedContent);
+        triggerToast('Word manuscript extracted cleanly as formatted text & images!');
       } catch (err: any) {
         console.error('Docx extraction error:', err);
         triggerToast('Word document uploaded as attachment');
@@ -880,10 +934,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         const { data: { user } } = await supabase.auth.getUser();
         const authorEmail = user?.email || 'editorial@theartledger.io';
 
+        const cleanContent = cleanWordHtmlToMarkdown(blogContent || '').trim() || blogContent?.trim() || 'Blog article content.';
+
         const payload = {
           title: blogTitle || 'Untitled Blog',
           short_description: blogExcerpt || '',
-          content: blogContent || '',
+          content: cleanContent,
           image_url: convertDriveUrl(blogImage),
           name: blogAuthor || 'Editorial Board',
           email: authorEmail,
