@@ -577,6 +577,75 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     }
   }
 
+  const fetchLiveWebsiteDeck = async () => {
+    try {
+      const { data: blogData } = await supabase
+        .from('blog_submissions')
+        .select('title, short_description, image_url, content')
+        .eq('status', 'approved')
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { data: magData } = await supabase
+        .from('magazines')
+        .select('issue_number, issue_name, cover_image_url, tagline, short_summary, status')
+        .neq('status', 'draft')
+        .order('issue_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { data: freedomEventData } = await supabase
+        .from('events')
+        .select('title, featured_image_url, short_description, location')
+        .ilike('title', '%freedom%')
+        .limit(1)
+        .maybeSingle();
+
+      return [
+        {
+          id: 'hero-blog',
+          badge: 'ESSAY // CONTEMPORARY ART',
+          title: blogData?.title || 'In Conversation with Prajakta Potnis',
+          subtitle: blogData?.short_description || 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
+          media_url: blogData?.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
+          media_type: 'image',
+          link_page: 'blogs',
+          link_text: 'Read Full Essay'
+        },
+        {
+          id: 'hero-magazine',
+          badge: magData?.status === 'coming_soon' ? `COMING SOON // ISSUE NO. ${magData?.issue_number || 42}` : `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 42}`,
+          title: magData?.issue_name || 'The Digital Renaissance',
+          subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining new media art.',
+          media_url: magData?.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
+          media_type: 'image',
+          link_page: 'magazine',
+          link_text: 'Explore Issue'
+        },
+        {
+          id: 'hero-event',
+          badge: 'EXHIBITION // FEATURED',
+          title: freedomEventData?.title || 'Freedom - Season 3',
+          subtitle: freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
+          media_url: freedomEventData?.featured_image_url || '/blog1/1.png',
+          media_type: 'image',
+          link_page: 'events',
+          link_text: 'View Exhibition'
+        }
+      ];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const loadLiveInterconnectedDeck = async () => {
+    triggerToast('Fetching live website deck...');
+    const deck = await fetchLiveWebsiteDeck();
+    setHeroList(deck);
+    triggerToast('Live website cards loaded into panel!');
+  };
+
   async function loadData() {
     setDataLoading(true);
     try {
@@ -618,10 +687,8 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         const freedomDefault = {
           id: 'freedom-season-3',
           title: 'Freedom - Season 3',
-          short_description: 'International Art Exhibition & Award Event',
-          long_description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar at Nehru Centre AC Art Gallery, Worli, Mumbai.',
-          event_date: '2026-08-11',
-          time: '12:00 PM - 7:00 PM',
+          short_description: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
+          event_date: '2026-09-15',
           location: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
           featured_image_url: '/blog1/1.png',
@@ -644,7 +711,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
             .limit(1)
             .maybeSingle();
 
-          if (settings && Array.isArray(settings.hero_slides)) {
+          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
             loadedHero = settings.hero_slides;
           }
         } catch (e) {
@@ -652,20 +719,26 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         }
 
         // 2. Fetch from Supabase Storage JSON file
-        if (loadedHero === null) {
+        if (!loadedHero) {
           try {
             const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
             const res = await fetch(publicJsonUrl);
             if (res.ok) {
               const parsed = await res.json();
-              if (Array.isArray(parsed)) {
+              if (Array.isArray(parsed) && parsed.length > 0) {
                 loadedHero = parsed;
               }
             }
           } catch (e) {}
         }
 
-        setHeroList(loadedHero || []);
+        if (loadedHero && loadedHero.length > 0) {
+          setHeroList(loadedHero);
+        } else {
+          // If no custom slides stored in DB, load the live 3-card website deck directly
+          const liveDeck = await fetchLiveWebsiteDeck();
+          setHeroList(liveDeck);
+        }
       }
       if (activeTab === 'dashboard') {
         const { data: subs } = await supabase
@@ -2344,17 +2417,49 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                 <span className="text-[10px] font-mono text-turquoise uppercase tracking-widest block mb-1">INTERACTIVE SHUFFLE DECK</span>
                 <h1 className="text-3xl font-serif font-bold tracking-tight text-midnight">Hero Deck Cards</h1>
               </div>
-              <button
-                onClick={() => openForm('hero', 'create')}
-                className="flex items-center gap-2 px-5 py-3 bg-midnight hover:bg-deepblue text-white text-xs font-sans font-bold uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Hero Card</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={loadLiveInterconnectedDeck}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-midnight text-xs font-mono font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-slate-200 shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-turquoise" />
+                  <span>Fetch Live Deck</span>
+                </button>
+                <button
+                  onClick={() => openForm('hero', 'create')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-midnight hover:bg-deepblue text-white text-xs font-sans font-bold uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Hero Card</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {heroList.map((card, idx) => (
+            {heroList.length === 0 ? (
+              <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl space-y-4 shadow-sm">
+                <Sparkles className="w-8 h-8 text-turquoise mx-auto" />
+                <h3 className="text-base font-serif font-bold text-midnight">No Custom Hero Cards Configured</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                  The website is currently serving the dynamic live interconnected deck. Click below to load the live website cards into the panel or create a new custom Hero card!
+                </p>
+                <div className="flex justify-center gap-3 pt-2">
+                  <button
+                    onClick={loadLiveInterconnectedDeck}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-midnight text-xs font-mono font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Load Live Website Cards
+                  </button>
+                  <button
+                    onClick={() => openForm('hero', 'create')}
+                    className="px-4 py-2 bg-midnight hover:bg-turquoise text-white hover:text-midnight text-xs font-mono font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    + Add New Card
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {heroList.map((card, idx) => (
                 <div key={card.id || idx} className="bg-white border border-[#EAE5D8] rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
                   <div className="flex gap-4">
                     <div className="w-24 h-32 rounded-xl overflow-hidden bg-slate-900 shrink-0 relative border border-slate-200">
@@ -2405,6 +2510,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 
