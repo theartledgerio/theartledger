@@ -2315,6 +2315,50 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
                 {formType === 'blog' && blogFormTab === 'edit' && (
                   <div className="space-y-4">
+
+                    {/* TOP PROMINENT DOCUMENT IMPORT ZONE */}
+                    <div className="p-4 border-2 border-dashed border-turquoise/40 rounded-2xl bg-turquoise/5 space-y-2.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-mono text-turquoise uppercase tracking-widest font-bold flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-turquoise" />
+                          <span>Auto-Fill from Word Manuscript (.docx, .doc, .txt, .pdf)</span>
+                        </label>
+                        {blogDocument && (
+                          <button
+                            type="button"
+                            onClick={() => setBlogDocument(null)}
+                            className="text-[9px] font-mono text-red-500 hover:underline uppercase cursor-pointer"
+                          >
+                            Remove File
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".txt,.pdf,.doc,.docx"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                          id="blog-manuscript-file-top"
+                        />
+                        <label
+                          htmlFor="blog-manuscript-file-top"
+                          className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-turquoise rounded-xl text-xs text-midnight cursor-pointer transition-all shadow-sm font-semibold"
+                        >
+                          <UploadCloud className="w-4 h-4 text-turquoise" />
+                          <span>
+                            {blogDocument ? `Loaded: ${blogDocument.fileName}` : '📄 Upload / Drag & Drop Word Document (.docx, .doc, .txt) to Auto-Extract'}
+                          </span>
+                        </label>
+                      </div>
+                      {blogDocument && (
+                        <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Manuscript file loaded & content extracted!</span>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Title</label>
                       <input
@@ -2428,50 +2472,6 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         placeholder="Type or paste your article content here naturally like in Google Docs...&#10;&#10;Separate paragraphs with double line breaks. Insert image links on their own line."
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans leading-relaxed"
                       />
-                    </div>
-
-                    {/* Editorial Document Upload */}
-                    <div className="p-5 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-mono text-slate-700 font-bold uppercase tracking-wider block">
-                          Editorial Manuscript / Attachment
-                        </label>
-                        {blogDocument && (
-                          <button
-                            type="button"
-                            onClick={() => setBlogDocument(null)}
-                            className="text-[9px] font-mono text-red-500 hover:underline uppercase"
-                          >
-                            Remove File
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="relative flex-grow">
-                          <input
-                            type="file"
-                            accept=".txt,.pdf,.doc,.docx"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            id="blog-manuscript-file"
-                          />
-                          <label
-                            htmlFor="blog-manuscript-file"
-                            className="w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-turquoise rounded-xl text-xs text-slate-600 hover:text-midnight cursor-pointer transition-all shadow-sm"
-                          >
-                            <UploadCloud className="w-4 h-4 text-slate-400" />
-                            <span>
-                              {blogDocument ? blogDocument.fileName : 'Upload Document (.docx, .doc, .pdf, .txt)'}
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-                      {blogDocument && (
-                        <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 font-semibold bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Manuscript file loaded successfully ({blogDocument.fileType || 'Unknown Type'})</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
