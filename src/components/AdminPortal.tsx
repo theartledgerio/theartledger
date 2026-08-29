@@ -67,12 +67,23 @@ const renderBlogPreviewContent = (text: string) => {
         </blockquote>
       );
     }
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
-      const isImg = trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('lh3.googleusercontent.com') || trimmed.includes('unsplash.com');
+    if (
+      trimmed.startsWith('http://') || 
+      trimmed.startsWith('https://') || 
+      trimmed.startsWith('/') || 
+      trimmed.startsWith('data:image/')
+    ) {
+      const isImg = 
+        trimmed.startsWith('data:image/') ||
+        trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || 
+        trimmed.includes('lh3.googleusercontent.com') || 
+        trimmed.includes('unsplash.com') || 
+        trimmed.includes('supabase.co');
+        
       if (isImg) {
         return (
           <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[450px] object-cover" />
+            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[500px] object-cover" />
           </div>
         );
       }
@@ -795,12 +806,36 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         const htmlResult = await mammoth.convertToHtml(
           { arrayBuffer },
           {
-            convertImage: mammoth.images.imgElement((image) => {
-              return image.read('base64').then((imageBuffer) => {
-                return {
-                  src: `data:${image.contentType};base64,${imageBuffer}`
-                };
-              });
+            convertImage: mammoth.images.imgElement(async (image) => {
+              try {
+                const imageBuffer = await image.read('base64');
+                const contentType = image.contentType || 'image/jpeg';
+                const fileExt = contentType.split('/')[1] || 'jpg';
+                const fileName = `docx_img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+                const byteCharacters = atob(imageBuffer);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: contentType });
+
+                const { error: uploadErr } = await supabase.storage
+                  .from('blog-images')
+                  .upload(fileName, blob, { contentType, cacheControl: '3600', upsert: true });
+
+                if (!uploadErr) {
+                  const { data } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+                  if (data?.publicUrl) {
+                    return { src: data.publicUrl };
+                  }
+                }
+                return { src: `data:${contentType};base64,${imageBuffer}` };
+              } catch (err) {
+                const imageBuffer = await image.read('base64');
+                return { src: `data:${image.contentType || 'image/jpeg'};base64,${imageBuffer}` };
+              }
             })
           }
         );
