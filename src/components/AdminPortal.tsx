@@ -1247,24 +1247,28 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         }
 
         setHeroList(updated);
-        localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
 
-        // Save to public Supabase Storage JSON for instant global accessibility across all devices
+        // 1. Save directly to Supabase site_settings DB table first (instant DB write)
+        try {
+          const { error: dbErr } = await supabase
+            .from('site_settings')
+            .upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
+          if (dbErr) {
+            console.error('Database site_settings upsert error:', dbErr);
+          }
+        } catch (e) {
+          console.error('Database save error:', e);
+        }
+
+        // 2. Also save to public Supabase Storage JSON
         try {
           const jsonBlob = new Blob([JSON.stringify(updated)], { type: 'application/json' });
           await supabase.storage
             .from('blog-images')
             .upload('hero_slides.json', jsonBlob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
-        } catch (e) {
-          console.error('Storage upload error for hero_slides.json:', e);
-        }
-
-        try {
-          await supabase
-            .from('site_settings')
-            .upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
         } catch (e) {}
-        triggerToast('Hero Deck card saved & synced globally!');
+
+        triggerToast('Hero Deck card saved & synced to Supabase!');
       }
 
       setShowFormModal(false);

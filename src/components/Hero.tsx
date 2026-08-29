@@ -129,36 +129,36 @@ export default function Hero({ onChangePage }: HeroProps) {
         const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
         const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
-        // Check if custom slides were explicitly configured in Storage, DB, or localStorage
+        // Check if custom slides were explicitly configured in DB site_settings or Storage
         let customDeck: HeroDeckCard[] | null = null;
 
-        // 1. Try public storage JSON file (100% accessible to all devices/users)
+        // 1. Try DB site_settings FIRST (Direct database read, zero CDN caching delays!)
         try {
-          const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
-          const res = await fetch(publicJsonUrl);
-          if (res.ok) {
-            const parsed = await res.json();
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              customDeck = parsed;
-            }
-          }
-        } catch (e) {}
+          const { data: settings } = await supabase
+            .from('site_settings')
+            .select('hero_slides')
+            .limit(1)
+            .maybeSingle();
 
-        // 2. Try DB site_settings
+          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+            customDeck = settings.hero_slides;
+          }
+        } catch (e) {
+          console.error('Error fetching site_settings hero_slides:', e);
+        }
+
+        // 2. Try public storage JSON file if DB row is not populated
         if (!customDeck) {
           try {
-            const { data: settings } = await supabase
-              .from('site_settings')
-              .select('hero_slides')
-              .limit(1)
-              .maybeSingle();
-
-            if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
-              customDeck = settings.hero_slides;
+            const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
+            const res = await fetch(publicJsonUrl);
+            if (res.ok) {
+              const parsed = await res.json();
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                customDeck = parsed;
+              }
             }
-          } catch (e) {
-            console.error('Error fetching site_settings hero_slides:', e);
-          }
+          } catch (e) {}
         }
 
         if (customDeck && customDeck.length > 0) {
