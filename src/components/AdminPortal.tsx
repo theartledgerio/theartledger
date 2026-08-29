@@ -10,7 +10,7 @@ import {
   Lock, Mail, Eye, EyeOff, LayoutDashboard, BookOpen, 
   Users, Layers, LogOut, Plus, Trash2, Edit3, X, Save, 
   CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud, CreditCard, Calendar, MapPin, Images, Film,
-  Search, Filter, RotateCcw
+  Search, Filter, RotateCcw, ExternalLink
 } from 'lucide-react';
 import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
@@ -95,10 +95,95 @@ const renderBlogPreviewContent = (text: string) => {
     }
     return (
       <p key={idx} className="mb-4 text-xs md:text-sm text-slate-700 leading-relaxed font-sans">
-        {trimmed}
+        {parseMarkdownLinksInPreview(trimmed)}
       </p>
     );
   });
+};
+
+const parseMarkdownLinksInPreview = (text: string): React.ReactNode => {
+  if (!text) return null;
+  const linkRegex = /\[([^\]]+)\](?:\(([^)]+)\))?|(https?:\/\/[^\s<]+)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    const matchIndex = match.index;
+    if (matchIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, matchIndex));
+    }
+
+    const [fullMatch, bracketText, parenUrl, rawUrl] = match;
+
+    if (bracketText) {
+      const targetUrl = (parenUrl || '').trim();
+      const displayText = bracketText.trim();
+      const formattedHref = targetUrl.startsWith('http') || targetUrl.startsWith('/') ? targetUrl : `https://${targetUrl}`;
+
+      parts.push(
+        <a
+          key={matchIndex}
+          href={formattedHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline hover:text-midnight transition-colors cursor-pointer mx-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>{displayText}</span>
+          <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
+        </a>
+      );
+    } else if (rawUrl) {
+      parts.push(
+        <a
+          key={matchIndex}
+          href={rawUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline hover:text-midnight transition-colors cursor-pointer mx-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>{rawUrl}</span>
+          <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
+        </a>
+      );
+    }
+
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
+const extractParagraphTextWithLinks = (el: HTMLElement): string => {
+  let output = '';
+  el.childNodes.forEach(child => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      output += child.textContent || '';
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const childEl = child as HTMLElement;
+      const tag = childEl.tagName.toLowerCase();
+      if (tag === 'a') {
+        const href = childEl.getAttribute('href')?.trim();
+        const text = extractParagraphTextWithLinks(childEl).trim();
+        if (href && text) {
+          output += ` [${text}](${href}) `;
+        } else if (text) {
+          output += text;
+        }
+      } else if (tag === 'img') {
+        // img handled separately
+      } else {
+        output += extractParagraphTextWithLinks(childEl);
+      }
+    }
+  });
+  return output.replace(/\s+/g, ' ').trim();
 };
 
 export const cleanWordHtmlToMarkdown = (html: string): string => {
@@ -117,13 +202,13 @@ export const cleanWordHtmlToMarkdown = (html: string): string => {
       const tag = el.tagName.toLowerCase();
 
       if (tag === 'h1' || tag === 'h2') {
-        const txt = el.textContent?.trim();
+        const txt = extractParagraphTextWithLinks(el);
         if (txt) blocks.push(`## ${txt}`);
       } else if (tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
-        const txt = el.textContent?.trim();
+        const txt = extractParagraphTextWithLinks(el);
         if (txt) blocks.push(`### ${txt}`);
       } else if (tag === 'blockquote') {
-        const txt = el.textContent?.trim();
+        const txt = extractParagraphTextWithLinks(el);
         if (txt) blocks.push(`> ${txt}`);
       } else if (tag === 'img') {
         const src = el.getAttribute('src');
@@ -136,7 +221,7 @@ export const cleanWordHtmlToMarkdown = (html: string): string => {
             if (src) blocks.push(src);
           });
         }
-        const txt = el.textContent?.trim();
+        const txt = extractParagraphTextWithLinks(el);
         if (txt) blocks.push(txt);
       } else {
         Array.from(el.childNodes).forEach(walk);
