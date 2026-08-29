@@ -129,23 +129,39 @@ export default function Hero({ onChangePage }: HeroProps) {
         const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
         const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
 
-        // Check if custom slides were explicitly configured in DB site_settings or localStorage
+        // Check if custom slides were explicitly configured in Storage, DB, or localStorage
         let customDeck: HeroDeckCard[] | null = null;
 
+        // 1. Try public storage JSON file (100% accessible to all devices/users)
         try {
-          const { data: settings } = await supabase
-            .from('site_settings')
-            .select('hero_slides')
-            .limit(1)
-            .maybeSingle();
-
-          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
-            customDeck = settings.hero_slides;
+          const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
+          const res = await fetch(publicJsonUrl);
+          if (res.ok) {
+            const parsed = await res.json();
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              customDeck = parsed;
+            }
           }
-        } catch (e) {
-          console.error('Error fetching site_settings hero_slides:', e);
+        } catch (e) {}
+
+        // 2. Try DB site_settings
+        if (!customDeck) {
+          try {
+            const { data: settings } = await supabase
+              .from('site_settings')
+              .select('hero_slides')
+              .limit(1)
+              .maybeSingle();
+
+            if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+              customDeck = settings.hero_slides;
+            }
+          } catch (e) {
+            console.error('Error fetching site_settings hero_slides:', e);
+          }
         }
 
+        // 3. Fallback to localStorage
         if (!customDeck) {
           const localSaved = localStorage.getItem('tal_hero_cards');
           if (localSaved) {

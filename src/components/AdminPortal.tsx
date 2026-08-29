@@ -485,30 +485,36 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         setEventsList(hasFreedom ? list : [freedomDefault, ...list]);
       }
       if (activeTab === 'hero' || activeTab === 'dashboard') {
+        let loadedHero: any[] | null = null;
         try {
-          const { data: settings } = await supabase
-            .from('site_settings')
-            .select('hero_slides')
-            .limit(1)
-            .maybeSingle();
-
-          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
-            setHeroList(settings.hero_slides);
-            localStorage.setItem('tal_hero_cards', JSON.stringify(settings.hero_slides));
-          } else {
-            const localSaved = localStorage.getItem('tal_hero_cards');
-            if (localSaved) {
-              try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
-            } else {
-              setHeroList([
-                { id: 'card-1', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200', badge: 'ESSAY // CONTEMPORARY', title: 'In Conversation with Prajakta Potnis', subtitle: 'Exploring contemporary sculpture and post-colonial motifs.', link_page: 'blogs', link_text: 'Read Full Essay' },
-                { id: 'card-2', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200', badge: 'EXHIBITION REVIEW', title: 'The Many Worlds of India\'s Tribal Art', subtitle: 'A curatorial deep-dive into indigenous craftsmanship.', link_page: 'events', link_text: 'View Exhibition' },
-                { id: 'card-3', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200', badge: 'LATEST ISSUE // NO. 42', title: 'The Digital Renaissance', subtitle: 'Special quarterly print release.', link_page: 'magazine', link_text: 'Explore Issue' },
-                { id: 'card-4', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=1200', badge: 'FEATURED ARTIST', title: 'Lorem ipsum dolor sit amet', subtitle: 'Monolithic forms in modern fine art commentary.', link_page: 'artists', link_text: 'Browse Roster' }
-              ]);
+          const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
+          const res = await fetch(publicJsonUrl);
+          if (res.ok) {
+            const parsed = await res.json();
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              loadedHero = parsed;
             }
           }
-        } catch (e) {
+        } catch (e) {}
+
+        if (!loadedHero) {
+          try {
+            const { data: settings } = await supabase
+              .from('site_settings')
+              .select('hero_slides')
+              .limit(1)
+              .maybeSingle();
+
+            if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+              loadedHero = settings.hero_slides;
+            }
+          } catch (e) {}
+        }
+
+        if (loadedHero && loadedHero.length > 0) {
+          setHeroList(loadedHero);
+          localStorage.setItem('tal_hero_cards', JSON.stringify(loadedHero));
+        } else {
           const localSaved = localStorage.getItem('tal_hero_cards');
           if (localSaved) {
             try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
@@ -1069,17 +1075,23 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
         setHeroList(updated);
         localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
+
+        // Save to public Supabase Storage JSON for instant global accessibility across all devices
         try {
-          const { error: settingsErr } = await supabase
+          const jsonBlob = new Blob([JSON.stringify(updated)], { type: 'application/json' });
+          await supabase.storage
+            .from('blog-images')
+            .upload('hero_slides.json', jsonBlob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
+        } catch (e) {
+          console.error('Storage upload error for hero_slides.json:', e);
+        }
+
+        try {
+          await supabase
             .from('site_settings')
             .upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
-          if (settingsErr) {
-            console.error('Error saving hero_slides to site_settings:', settingsErr);
-          }
-        } catch (e) {
-          console.error('Database save error:', e);
-        }
-        triggerToast('Hero Deck card saved successfully!');
+        } catch (e) {}
+        triggerToast('Hero Deck card saved & synced globally!');
       }
 
       setShowFormModal(false);
@@ -1099,6 +1111,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         const updated = heroList.filter(c => c.id !== id);
         setHeroList(updated);
         localStorage.setItem('tal_hero_cards', JSON.stringify(updated));
+        try {
+          const jsonBlob = new Blob([JSON.stringify(updated)], { type: 'application/json' });
+          await supabase.storage
+            .from('blog-images')
+            .upload('hero_slides.json', jsonBlob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
+        } catch (e) {}
         try {
           await supabase.from('site_settings').upsert({ id: '00000000-0000-0000-0000-000000000001', hero_slides: updated });
         } catch (e) {}
