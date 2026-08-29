@@ -635,40 +635,44 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       }
       if (activeTab === 'hero' || activeTab === 'dashboard') {
         let loadedHero: any[] | null = null;
-        try {
-          const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
-          const res = await fetch(publicJsonUrl);
-          if (res.ok) {
-            const parsed = await res.json();
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedHero = parsed;
-            }
-          }
-        } catch (e) {}
 
+        // 1. Fetch directly from Supabase site_settings table
+        try {
+          const { data: settings } = await supabase
+            .from('site_settings')
+            .select('hero_slides')
+            .limit(1)
+            .maybeSingle();
+
+          if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
+            loadedHero = settings.hero_slides;
+          }
+        } catch (e) {
+          console.error('Error querying Supabase site_settings for hero_slides:', e);
+        }
+
+        // 2. Fetch from Supabase Storage JSON file
         if (!loadedHero) {
           try {
-            const { data: settings } = await supabase
-              .from('site_settings')
-              .select('hero_slides')
-              .limit(1)
-              .maybeSingle();
-
-            if (settings?.hero_slides && Array.isArray(settings.hero_slides) && settings.hero_slides.length > 0) {
-              loadedHero = settings.hero_slides;
+            const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
+            const res = await fetch(publicJsonUrl);
+            if (res.ok) {
+              const parsed = await res.json();
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                loadedHero = parsed;
+              }
             }
           } catch (e) {}
         }
 
-        if (loadedHero && loadedHero.length > 0) {
-          setHeroList(loadedHero);
-          localStorage.setItem('tal_hero_cards', JSON.stringify(loadedHero));
-        } else {
-          const localSaved = localStorage.getItem('tal_hero_cards');
-          if (localSaved) {
-            try { setHeroList(JSON.parse(localSaved)); } catch (e) {}
-          }
-        }
+        const defaultHeroCards = [
+          { id: 'card-1', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200', badge: 'ESSAY // CONTEMPORARY', title: 'In Conversation with Prajakta Potnis', subtitle: 'Exploring contemporary sculpture and post-colonial motifs.', link_page: 'blogs', link_text: 'Read Full Essay' },
+          { id: 'card-2', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200', badge: 'EXHIBITION REVIEW', title: 'The Many Worlds of India\'s Tribal Art', subtitle: 'A curatorial deep-dive into indigenous craftsmanship.', link_page: 'events', link_text: 'View Exhibition' },
+          { id: 'card-3', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200', badge: 'LATEST ISSUE // NO. 42', title: 'The Digital Renaissance', subtitle: 'Special quarterly print release.', link_page: 'magazine', link_text: 'Explore Issue' },
+          { id: 'card-4', media_type: 'image', media_url: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&q=80&w=1200', badge: 'FEATURED ARTIST', title: 'Lorem ipsum dolor sit amet', subtitle: 'Monolithic forms in modern fine art commentary.', link_page: 'artists', link_text: 'Browse Roster' }
+        ];
+
+        setHeroList(loadedHero && loadedHero.length > 0 ? loadedHero : defaultHeroCards);
       }
       if (activeTab === 'dashboard') {
         const { data: subs } = await supabase
