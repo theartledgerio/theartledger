@@ -164,8 +164,8 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
         </div>
 
         {/* Cover Image */}
-        {blog.image && !(blog.content || '').includes(blog.image) && (
-          <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg flex justify-center bg-slate-50/50">
+        {blog.image && (
+          <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg flex justify-center bg-slate-50/50 border border-[#EAE5D8]">
             <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain max-h-[70vh] rounded-2xl" />
           </div>
         )}
@@ -279,9 +279,32 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
               {blocks.map((block, idx) => {
                 const trimmed = block.trim();
 
+                // Markdown image ![alt](url)
+                const mdImgMatch = trimmed.match(/^!\[(.*?)\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)$/i);
+                if (mdImgMatch) {
+                  const imgCaption = mdImgMatch[1];
+                  const imgSrc = mdImgMatch[2];
+                  return (
+                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8] flex flex-col items-center bg-slate-50/30">
+                      <img src={imgSrc} alt={imgCaption || 'Article Image'} className="w-full h-auto object-contain max-h-[75vh] rounded-2xl" />
+                      {imgCaption && <p className="text-[11px] font-mono text-graycustom px-4 py-2 border-t border-slate-100 w-full text-center">{imgCaption}</p>}
+                    </div>
+                  );
+                }
+
+                // Direct image URL or Data URL
                 if (
                   (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) &&
-                  (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || trimmed.includes('googleusercontent.com') || trimmed.includes('unsplash.com') || trimmed.includes('supabase.co') || trimmed.startsWith('data:image/'))
+                  (
+                    trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg|avif)(\?.*)?$/i) ||
+                    trimmed.includes('googleusercontent.com') ||
+                    trimmed.includes('unsplash.com') ||
+                    trimmed.includes('supabase.co') ||
+                    trimmed.includes('postimg.cc') ||
+                    trimmed.includes('cloudinary.com') ||
+                    trimmed.includes('imgur.com') ||
+                    trimmed.startsWith('data:image/')
+                  )
                 ) {
                   return (
                     <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8] flex justify-center bg-slate-50/30">

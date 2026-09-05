@@ -42,15 +42,29 @@ export default function App() {
       setShowSplash(false);
     }, 1000);
 
-    if (window.location.pathname === '/editorial') {
-      setCurrentPage('admin');
-      setPortalRole('editor');
-    } else if (window.location.pathname === '/admin') {
-      setCurrentPage('admin');
-      setPortalRole('admin');
-    }
+    const checkRoute = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
 
-    return () => clearTimeout(timer);
+      if (path.includes('editorial') || hash.includes('editorial') || search.includes('editorial')) {
+        setCurrentPage('admin');
+        setPortalRole('editor');
+      } else if (path.includes('admin') || hash.includes('admin') || search.includes('admin')) {
+        setCurrentPage('admin');
+        setPortalRole('admin');
+      }
+    };
+
+    checkRoute();
+    window.addEventListener('hashchange', checkRoute);
+    window.addEventListener('popstate', checkRoute);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('hashchange', checkRoute);
+      window.removeEventListener('popstate', checkRoute);
+    };
   }, []);
 
   const handleSignInSuccess = (email: string) => {

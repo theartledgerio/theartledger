@@ -27,19 +27,19 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-blog',
     media_type: 'image',
-    media_url: 'https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/1775684865943-1trurx.png',
+    media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
     badge: 'ESSAY // CONTEMPORARY ART',
-    title: 'In Conversation with Prajakta Potnis',
-    subtitle: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
+    title: 'The Architecture of Modern Art',
+    subtitle: 'Exploring contemporary aesthetics, spatial dynamics, and cultural reflections.',
     link_page: 'blogs',
     link_text: 'Read Full Essay'
   },
   {
     id: 'hero-magazine',
     media_type: 'image',
-    media_url: 'https://i.postimg.cc/DwBxZ3X9/tal-issue-4-cover-page-0001-(1).jpg',
-    badge: 'LATEST PRINT ISSUE // NO. 4',
-    title: 'Issue 04 - July 2026',
+    media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
+    badge: 'LATEST PRINT ISSUE',
+    title: 'The Art Ledger Quarterly',
     subtitle: 'Special quarterly print release examining new media art & generative algorithms.',
     link_page: 'magazine',
     link_text: 'Explore Magazine'
@@ -72,31 +72,37 @@ export default function Hero({ onChangePage }: HeroProps) {
   useEffect(() => {
     async function loadInterconnectedHeroContent() {
       try {
-        // 1. Fetch Prajakta Potnis blog or latest blog submission
+        // 1. Fetch latest approved blog submission
         const { data: allBlogs } = await supabase
           .from('blog_submissions')
           .select('title, image_url, content, category, short_description')
           .eq('status', 'approved')
-          .order('published_at', { ascending: false });
+          .order('published_at', { ascending: false })
+          .limit(5);
 
-        const prajaktaBlog = (allBlogs || []).find(b => 
-          b.title?.toLowerCase().includes('prajakta') || 
-          b.title?.toLowerCase().includes('potnis')
-        ) || (allBlogs || [])[0];
+        const latestBlog = (allBlogs || [])[0];
         
         const extractFirstImage = (htmlContent: string) => {
           if (!htmlContent) return null;
-          const match = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i);
-          return match ? match[1] : null;
+          // HTML img tag
+          const htmlMatch = htmlContent.match(/<img[^>]+src=["']?([^"'>\s]+)["']?/i);
+          if (htmlMatch) return htmlMatch[1];
+          // Markdown image
+          const mdMatch = htmlContent.match(/!\[.*?\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/i);
+          if (mdMatch) return mdMatch[1];
+          // Direct URL
+          const urlMatch = htmlContent.match(/(https?:\/\/[^\s<]+?\.(?:png|jpe?g|webp|gif|svg)|https?:\/\/[^\s<]+supabase\.co[^\s<]+|data:image\/[a-zA-Z]+;base64,[^\s<]+)/i);
+          if (urlMatch) return urlMatch[1];
+          return null;
         };
 
-        const extractedImage = prajaktaBlog ? extractFirstImage(prajaktaBlog.content) : null;
-        const blogMediaUrl = prajaktaBlog
-          ? (prajaktaBlog.image_url || extractedImage || '')
-          : '';
+        const extractedImage = latestBlog ? extractFirstImage(latestBlog.content) : null;
+        const blogMediaUrl = latestBlog
+          ? (latestBlog.image_url || extractedImage || DEFAULT_3_HERO_CARDS[0].media_url)
+          : DEFAULT_3_HERO_CARDS[0].media_url;
 
-        const blogTitle = prajaktaBlog?.title || 'In Conversation with Prajakta Potnis';
-        const blogSubtitle = prajaktaBlog?.short_description || 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.';
+        const blogTitle = latestBlog?.title || DEFAULT_3_HERO_CARDS[0].title;
+        const blogSubtitle = latestBlog?.short_description || DEFAULT_3_HERO_CARDS[0].subtitle;
 
         // 2. Fetch latest published or coming soon magazine edition
         const { data: magData } = await supabase
@@ -107,32 +113,21 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        // 3. Fetch Freedom - Season 3 exhibition event specifically & cleanup unwanted non-freedom events from DB
-        try {
-          // Delete any unwanted test or dummy events from DB that are not Freedom
-          await supabase
-            .from('events')
-            .delete()
-            .not('title', 'ilike', '%freedom%');
-        } catch (e) {
-          // Ignore if permission constrained
-        }
-
-        const { data: freedomEventData } = await supabase
+        // 3. Fetch latest / featured event
+        const { data: eventData } = await supabase
           .from('events')
           .select('title, featured_image_url, short_description, location')
-          .ilike('title', '%freedom%')
+          .order('event_date', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        const eventMediaUrl = freedomEventData?.featured_image_url || '/blog1/1.png';
-        const eventTitle = freedomEventData?.title || 'Freedom - Season 3';
-        const eventSubtitle = freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.';
+        const eventMediaUrl = eventData?.featured_image_url || DEFAULT_3_HERO_CARDS[2].media_url;
+        const eventTitle = eventData?.title || DEFAULT_3_HERO_CARDS[2].title;
+        const eventSubtitle = eventData?.short_description || DEFAULT_3_HERO_CARDS[2].subtitle;
 
-        // Check if custom slides were explicitly configured in DB site_settings or Storage
+        // Check if custom slides were explicitly configured in DB site_settings
         let customDeck: HeroDeckCard[] | null = null;
 
-        // 1. Try DB site_settings FIRST (Direct database read, zero CDN caching delays!)
         try {
           const { data: settings } = await supabase
             .from('site_settings')
@@ -147,31 +142,20 @@ export default function Hero({ onChangePage }: HeroProps) {
           console.error('Error fetching site_settings hero_slides:', e);
         }
 
-        // 2. Try public storage JSON file if DB row is not populated
+        // Try storage JSON fallback
         if (!customDeck) {
           try {
-            const publicJsonUrl = `https://bybmtrhpgxnquzjbhhtm.supabase.co/storage/v1/object/public/blog-images/hero_slides.json?t=${Date.now()}`;
-            const res = await fetch(publicJsonUrl);
-            if (res.ok) {
-              const parsed = await res.json();
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                customDeck = parsed;
+            const { data } = supabase.storage.from('blog-images').getPublicUrl('hero_slides.json');
+            if (data?.publicUrl) {
+              const res = await fetch(`${data.publicUrl}?t=${Date.now()}`);
+              if (res.ok) {
+                const parsed = await res.json();
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  customDeck = parsed;
+                }
               }
             }
           } catch (e) {}
-        }
-
-        // 3. Fallback to localStorage
-        if (!customDeck) {
-          const localSaved = localStorage.getItem('tal_hero_cards');
-          if (localSaved) {
-            try {
-              const parsed = JSON.parse(localSaved);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                customDeck = parsed;
-              }
-            } catch (e) {}
-          }
         }
 
         if (customDeck && customDeck.length > 0) {
@@ -179,13 +163,13 @@ export default function Hero({ onChangePage }: HeroProps) {
           return;
         }
 
-        // Dynamically build interconnected 3-card deck with uploaded images
+        // Dynamically build interconnected 3-card deck with current live assets
         setCards([
           {
             id: 'hero-blog',
             media_type: 'image',
-            media_url: blogMediaUrl || DEFAULT_3_HERO_CARDS[0].media_url,
-            badge: 'ESSAY // CONTEMPORARY ART',
+            media_url: blogMediaUrl,
+            badge: latestBlog?.category ? `ESSAY // ${latestBlog.category.toUpperCase()}` : 'ESSAY // CONTEMPORARY ART',
             title: blogTitle,
             subtitle: blogSubtitle,
             link_page: 'blogs',
@@ -196,17 +180,17 @@ export default function Hero({ onChangePage }: HeroProps) {
             media_type: 'image',
             media_url: magData?.cover_image_url || DEFAULT_3_HERO_CARDS[1].media_url,
             badge: magData?.status === 'coming_soon'
-              ? `COMING SOON // ISSUE NO. ${magData?.issue_number || 42}`
-              : `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 42}`,
-            title: magData?.issue_name || 'The Digital Renaissance',
-            subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining new media art.',
+              ? `COMING SOON // ISSUE NO. ${magData?.issue_number || 1}`
+              : `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 1}`,
+            title: magData?.issue_name || 'The Art Ledger Quarterly',
+            subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining contemporary fine art.',
             link_page: 'magazine',
             link_text: 'Explore Issue'
           },
           {
             id: 'hero-event',
             media_type: 'image',
-            media_url: eventMediaUrl || DEFAULT_3_HERO_CARDS[2].media_url,
+            media_url: eventMediaUrl,
             badge: 'EXHIBITION // FEATURED',
             title: eventTitle,
             subtitle: eventSubtitle,
@@ -218,7 +202,21 @@ export default function Hero({ onChangePage }: HeroProps) {
         console.error('Error interconnecting hero assets:', err);
       }
     }
+
     loadInterconnectedHeroContent();
+
+    // Subscribe to real-time changes so Hero stays updated across all devices
+    const channel = supabase
+      .channel('public:hero_updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_submissions' }, () => loadInterconnectedHeroContent())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'magazines' }, () => loadInterconnectedHeroContent())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => loadInterconnectedHeroContent())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, () => loadInterconnectedHeroContent())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Continuous infinite auto-rotation between the 3 cards (4 seconds per card, pauses on user hover)

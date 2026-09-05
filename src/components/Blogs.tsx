@@ -241,8 +241,17 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
         const filtered = data || [];
 
         const extractFirstImage = (htmlContent: string) => {
-          const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);
-          return match ? match[1] : null;
+          if (!htmlContent) return null;
+          // 1. HTML img tag
+          const htmlMatch = htmlContent.match(/<img[^>]+src=["']?([^"'>\s]+)["']?/i);
+          if (htmlMatch) return htmlMatch[1];
+          // 2. Markdown image
+          const mdMatch = htmlContent.match(/!\[.*?\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/i);
+          if (mdMatch) return mdMatch[1];
+          // 3. Standalone image URL on its own line
+          const urlMatch = htmlContent.match(/(https?:\/\/[^\s<]+?\.(?:png|jpe?g|webp|gif|svg)|https?:\/\/[^\s<]+supabase\.co[^\s<]+|data:image\/[a-zA-Z]+;base64,[^\s<]+)/i);
+          if (urlMatch) return urlMatch[1];
+          return null;
         };
 
         const mapped: Blog[] = filtered.map((item, index) => {
@@ -254,7 +263,7 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
               title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
               excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
               content: FATHER_DAUGHTER_BLOG_HTML,
-              image: '/blog1/1.png',
+              image: item.image_url || '/blog1/1.png',
               readingTime: '12 min read',
               author: item.name || 'Editorial Board',
               category: 'Art Market & Philosophy',
@@ -271,14 +280,17 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
 
           const wordCount = item.content ? item.content.split(/\s+/).length : 0;
           const readMin = Math.max(1, Math.ceil(wordCount / 200));
-          const firstImage = extractFirstImage(item.content || '');
+          const extractedImg = extractFirstImage(item.content || '');
+          const coverImage = (item.image_url && item.image_url.trim().length > 0)
+            ? item.image_url.trim()
+            : (extractedImg || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800');
 
           return {
             id: item.id,
             title: item.title,
             excerpt: item.short_description || '',
             content: item.content || '',
-            image: firstImage || item.image_url || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+            image: coverImage,
             readingTime: `${readMin} min read`,
             author: item.name || 'Editorial Board',
             category: item.category || 'Contemporary',
@@ -297,32 +309,14 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           index === self.findIndex(b => b.title.toLowerCase().trim() === blog.title.toLowerCase().trim())
         );
 
-        const sorted = [...uniqueBlogs].sort((a, b) => {
-          if (a.title.toLowerCase().includes('prajakta')) return -1;
-          if (b.title.toLowerCase().includes('prajakta')) return 1;
-          return 0;
-        });
-
-        if (sorted.length > 0) {
-          sorted.forEach((b, i) => {
+        if (uniqueBlogs.length > 0) {
+          uniqueBlogs.forEach((b, i) => {
             b.featured = (i === 0);
           });
-          setBlogs(sorted);
+          setBlogs(uniqueBlogs);
         } else {
-          // Fallback to default essays if database table is empty
+          // Fallback if database table is completely empty
           setBlogs([
-            {
-              id: 'prajakta-potnis-essay',
-              title: 'In Conversation with Prajakta Potnis',
-              excerpt: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
-              content: '<p>Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.</p>',
-              image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=800',
-              readingTime: '8 min read',
-              author: 'Editorial Board',
-              category: 'Contemporary',
-              date: 'Recent',
-              featured: true
-            },
             {
               id: 'father-daughter-duo',
               title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
@@ -333,44 +327,30 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
               author: 'Editorial Board',
               category: 'Art Market & Philosophy',
               date: 'Mar 15, 2026',
-              featured: false
+              featured: true
             }
           ]);
         }
       } catch (err) {
         console.error('Error fetching blogs from database:', err);
-        setBlogs([
-          {
-            id: 'prajakta-potnis-essay',
-            title: 'In Conversation with Prajakta Potnis',
-            excerpt: 'Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.',
-            content: '<p>Exploring contemporary sculpture, domestic spaces, and post-colonial motifs.</p>',
-            image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=800',
-            readingTime: '8 min read',
-            author: 'Editorial Board',
-            category: 'Contemporary',
-            date: 'Recent',
-            featured: true
-          },
-          {
-            id: 'father-daughter-duo',
-            title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
-            excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
-            content: FATHER_DAUGHTER_BLOG_HTML,
-            image: '/blog1/1.png',
-            readingTime: '12 min read',
-            author: 'Editorial Board',
-            category: 'Art Market & Philosophy',
-            date: 'Mar 15, 2026',
-            featured: false
-          }
-        ]);
       } finally {
         setLoading(false);
       }
     }
 
     loadBlogs();
+
+    // Real-time Supabase subscription for instant updates on all devices
+    const channel = supabase
+      .channel('public:blog_submissions_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_submissions' }, () => {
+        loadBlogs();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Filter blogs based on global search query
