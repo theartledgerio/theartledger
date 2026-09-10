@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, Sparkles, Layers, BookOpen, Calendar, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
+import { convertDriveUrl, extractFirstImage } from './blogRenderer';
 
 export interface HeroDeckCard {
   id: string;
@@ -27,9 +28,9 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-blog',
     media_type: 'image',
-    media_url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
+    media_url: '',
     badge: 'ESSAY // CONTEMPORARY ART',
-    title: 'The Architecture of Modern Art',
+    title: 'Folk Art of the United States: History, Artists, Styles & Cultural Traditions',
     subtitle: 'Exploring contemporary aesthetics, spatial dynamics, and cultural reflections.',
     link_page: 'blogs',
     link_text: 'Read Full Essay'
@@ -37,7 +38,7 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-magazine',
     media_type: 'image',
-    media_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
+    media_url: '',
     badge: 'LATEST PRINT ISSUE',
     title: 'The Art Ledger Quarterly',
     subtitle: 'Special quarterly print release examining new media art & generative algorithms.',
@@ -47,8 +48,8 @@ const DEFAULT_3_HERO_CARDS: HeroDeckCard[] = [
   {
     id: 'hero-event',
     media_type: 'image',
-    media_url: '/blog1/1.png',
-    badge: 'EXHIBITION ARCHIVE // MUMBAI',
+    media_url: '',
+    badge: 'EXHIBITION // FEATURED',
     title: 'Freedom - Season 3',
     subtitle: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
     link_page: 'events',
@@ -75,31 +76,19 @@ export default function Hero({ onChangePage }: HeroProps) {
         // 1. Fetch latest approved blog submission
         const { data: allBlogs } = await supabase
           .from('blog_submissions')
-          .select('title, image_url, content, category, short_description')
+          .select('id, title, image_url, content, category, short_description')
           .eq('status', 'approved')
-          .order('published_at', { ascending: false })
-          .limit(5);
+          .order('published_at', { ascending: false });
 
-        const latestBlog = (allBlogs || [])[0];
-        
-        const extractFirstImage = (htmlContent: string) => {
-          if (!htmlContent) return null;
-          // HTML img tag
-          const htmlMatch = htmlContent.match(/<img[^>]+src=["']?([^"'>\s]+)["']?/i);
-          if (htmlMatch) return htmlMatch[1];
-          // Markdown image
-          const mdMatch = htmlContent.match(/!\[.*?\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/i);
-          if (mdMatch) return mdMatch[1];
-          // Direct URL
-          const urlMatch = htmlContent.match(/(https?:\/\/[^\s<]+?\.(?:png|jpe?g|webp|gif|svg)|https?:\/\/[^\s<]+supabase\.co[^\s<]+|data:image\/[a-zA-Z]+;base64,[^\s<]+)/i);
-          if (urlMatch) return urlMatch[1];
-          return null;
-        };
+        const realBlogs = (allBlogs || []).filter(item => {
+          const title = (item.title || '').toLowerCase();
+          return !title.includes('father') && !title.includes('daughter') && !title.includes('fake history') && item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && item.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
+        });
 
+        const latestBlog = realBlogs[0];
         const extractedImage = latestBlog ? extractFirstImage(latestBlog.content) : null;
-        const blogMediaUrl = latestBlog
-          ? (latestBlog.image_url || extractedImage || DEFAULT_3_HERO_CARDS[0].media_url)
-          : DEFAULT_3_HERO_CARDS[0].media_url;
+        const rawBlogMediaUrl = latestBlog ? (latestBlog.image_url || extractedImage || '') : '';
+        const blogMediaUrl = convertDriveUrl(rawBlogMediaUrl);
 
         const blogTitle = latestBlog?.title || DEFAULT_3_HERO_CARDS[0].title;
         const blogSubtitle = latestBlog?.short_description || DEFAULT_3_HERO_CARDS[0].subtitle;
@@ -113,6 +102,8 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
+        const magMediaUrl = convertDriveUrl(magData?.cover_image_url || '');
+
         // 3. Fetch latest / featured event
         const { data: eventData } = await supabase
           .from('events')
@@ -121,7 +112,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           .limit(1)
           .maybeSingle();
 
-        const eventMediaUrl = eventData?.featured_image_url || DEFAULT_3_HERO_CARDS[2].media_url;
+        const eventMediaUrl = convertDriveUrl(eventData?.featured_image_url || '');
         const eventTitle = eventData?.title || DEFAULT_3_HERO_CARDS[2].title;
         const eventSubtitle = eventData?.short_description || DEFAULT_3_HERO_CARDS[2].subtitle;
 

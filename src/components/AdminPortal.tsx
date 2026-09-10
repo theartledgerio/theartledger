@@ -551,13 +551,16 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
   const fetchLiveWebsiteDeck = async () => {
     try {
-      const { data: blogData } = await supabase
+      const { data: blogList } = await supabase
         .from('blog_submissions')
-        .select('title, short_description, image_url, content')
+        .select('id, title, short_description, image_url, content, category')
         .eq('status', 'approved')
-        .order('published_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('published_at', { ascending: false });
+
+      const blogData = (blogList || []).find(b => {
+        const t = (b.title || '').toLowerCase();
+        return !t.includes('father') && !t.includes('daughter') && !t.includes('fake history') && b.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && b.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
+      });
 
       const { data: magData } = await supabase
         .from('magazines')
@@ -577,10 +580,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       return [
         {
           id: 'hero-blog',
-          badge: 'ESSAY // CONTEMPORARY ART',
-          title: blogData?.title || 'The Architecture of Modern Art',
+          badge: blogData?.category ? `ESSAY // ${blogData.category.toUpperCase()}` : 'ESSAY // CONTEMPORARY ART',
+          title: blogData?.title || 'Folk Art of the United States: History, Artists, Styles & Cultural Traditions',
           subtitle: blogData?.short_description || 'Exploring contemporary aesthetics, spatial dynamics, and cultural reflections.',
-          media_url: blogData?.image_url || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&q=80&w=1200',
+          media_url: convertDriveUrl(blogData?.image_url || ''),
           media_type: 'image',
           link_page: 'blogs',
           link_text: 'Read Full Essay'
@@ -590,7 +593,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           badge: magData?.status === 'coming_soon' ? `COMING SOON // ISSUE NO. ${magData?.issue_number || 1}` : `LATEST PRINT // ISSUE NO. ${magData?.issue_number || 1}`,
           title: magData?.issue_name || 'The Art Ledger Quarterly',
           subtitle: magData?.tagline || magData?.short_summary || 'Special quarterly print release examining contemporary fine art.',
-          media_url: magData?.cover_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=1200',
+          media_url: convertDriveUrl(magData?.cover_image_url || ''),
           media_type: 'image',
           link_page: 'magazine',
           link_text: 'Explore Issue'
@@ -600,7 +603,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           badge: 'EXHIBITION // FEATURED',
           title: freedomEventData?.title || 'Freedom - Season 3',
           subtitle: freedomEventData?.short_description || 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
-          media_url: freedomEventData?.featured_image_url || '/blog1/1.png',
+          media_url: convertDriveUrl(freedomEventData?.featured_image_url || ''),
           media_type: 'image',
           link_page: 'events',
           link_text: 'View Exhibition'
@@ -626,7 +629,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           .from('blog_submissions')
           .select('*')
           .order('published_at', { ascending: false });
-        const filtered = (data || []).filter(item => item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e');
+        const filtered = (data || []).filter(item => {
+          const t = (item.title || '').toLowerCase();
+          return !t.includes('father') && !t.includes('daughter') && !t.includes('fake history') && item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && item.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
+        });
         setBlogsList(filtered);
       }
       if (activeTab === 'magazines' || activeTab === 'dashboard') {
