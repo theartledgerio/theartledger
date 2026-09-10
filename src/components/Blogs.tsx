@@ -93,10 +93,10 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
   // Filter blogs based on global search query
   const filteredBlogs = blogs.filter(blog => {
     return (
-      blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.category.toLowerCase().includes(searchQuery.toLowerCase())
+      (blog.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (blog.excerpt || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (blog.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (blog.category || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 

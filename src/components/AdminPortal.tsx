@@ -449,7 +449,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [eventTitle, setEventTitle] = useState('');
   const [eventSubtitle, setEventSubtitle] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
   const [eventTime, setEventTime] = useState('');
+  const [eventEndTime, setEventEndTime] = useState('');
   const [eventVenue, setEventVenue] = useState('');
   const [eventArtist, setEventArtist] = useState('');
   const [eventImage, setEventImage] = useState('');
@@ -666,10 +668,13 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           id: 'freedom-season-3',
           title: 'Freedom - Season 3',
           short_description: 'International Art Exhibition & Award Event at Nehru Centre AC Art Gallery, Worli, Mumbai.',
-          event_date: '2026-09-15',
+          event_date: '2026-08-11',
+          end_date: '2026-08-16',
+          time: '12:00 PM',
+          end_time: '7:00 PM',
           location: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
-          featured_image_url: '/blog1/1.png',
+          featured_image_url: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
           status: 'published',
           type: 'Exhibition'
         };
@@ -895,7 +900,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setEventTitle(item ? item.title : '');
       setEventSubtitle(item ? item.short_description || item.subtitle || '' : '');
       setEventDate(item ? item.event_date || item.date || '' : '');
-      setEventTime(item ? item.time || '12:00 PM - 7:00 PM' : '');
+      setEventEndDate(item ? item.end_date || item.endDate || '' : '');
+      setEventTime(item ? item.time || item.start_time || '' : '');
+      setEventEndTime(item ? item.end_time || item.endTime || '' : '');
       setEventVenue(item ? item.location || item.venue || '' : '');
       setEventArtist(item ? item.artist || '' : '');
       setEventImage(item ? item.featured_image_url || item.image || '' : '');
@@ -1271,11 +1278,14 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         else if (rawStatus.includes('draft')) finalStatus = 'draft';
         else if (rawStatus.includes('published')) finalStatus = 'published';
 
-        const payload = {
+        const payload: any = {
           title: eventTitle || 'Untitled Event',
           short_description: eventSubtitle || '',
           long_description: eventDescription || '',
           event_date: eventDate || new Date().toISOString().split('T')[0],
+          end_date: eventEndDate || null,
+          time: eventTime || '12:00 PM',
+          end_time: eventEndTime || null,
           location: eventVenue || '',
           featured_image_url: convertDriveUrl(eventImage),
           status: finalStatus,
@@ -1284,11 +1294,38 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
         if (formMode === 'create') {
           const { error } = await supabase.from('events').insert([payload]);
-          if (error) throw error;
+          if (error) {
+            // Fallback without optional columns if table schema differs
+            const corePayload = {
+              title: payload.title,
+              short_description: payload.short_description,
+              long_description: payload.long_description,
+              event_date: payload.event_date,
+              location: payload.location,
+              featured_image_url: payload.featured_image_url,
+              status: payload.status,
+              slug: payload.slug
+            };
+            const { error: coreErr } = await supabase.from('events').insert([corePayload]);
+            if (coreErr) throw coreErr;
+          }
           triggerToast('Event created successfully!');
         } else {
           const { error } = await supabase.from('events').update(payload).eq('id', editingId);
-          if (error) throw error;
+          if (error) {
+            const corePayload = {
+              title: payload.title,
+              short_description: payload.short_description,
+              long_description: payload.long_description,
+              event_date: payload.event_date,
+              location: payload.location,
+              featured_image_url: payload.featured_image_url,
+              status: payload.status,
+              slug: payload.slug
+            };
+            const { error: coreErr } = await supabase.from('events').update(corePayload).eq('id', editingId);
+            if (coreErr) throw coreErr;
+          }
           triggerToast('Event updated successfully!');
         }
       } else if (formType === 'hero') {
@@ -2149,7 +2186,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                   <thead>
                     <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
                       <th className="p-4">Title</th>
-                      <th className="p-4">Date</th>
+                      <th className="p-4">Date & Time Range</th>
                       <th className="p-4">Venue/Location</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
@@ -2168,7 +2205,16 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       eventsList.map(ev => (
                         <tr key={ev.id} className="hover:bg-slate-50/60">
                           <td className="p-4 font-serif font-bold text-midnight max-w-sm truncate">{ev.title}</td>
-                          <td className="p-4 text-slate-600 font-mono">{ev.event_date || ev.date || 'TBD'}</td>
+                          <td className="p-4 text-slate-600 font-mono text-xs">
+                            <div className="font-semibold text-midnight">
+                              {ev.event_date || ev.date || 'TBD'}{ev.end_date || ev.endDate ? ` → ${ev.end_date || ev.endDate}` : ''}
+                            </div>
+                            {(ev.time || ev.end_time || ev.start_time) && (
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                {ev.time || ev.start_time || ''}{ev.end_time && !((ev.time || '').includes('-')) ? ` – ${ev.end_time}` : ''}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-4 text-slate-600 truncate max-w-xs">{ev.location || ev.venue || 'N/A'}</td>
                           <td className="p-4">
                             <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
@@ -3216,9 +3262,10 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       </div>
                     </div>
 
+                    {/* EVENT DATES: START DATE & END DATE */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Event Date</label>
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Start Date</label>
                         <input
                           type="date"
                           value={eventDate}
@@ -3227,12 +3274,35 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Event Time</label>
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">End Date (Optional)</label>
+                        <input
+                          type="date"
+                          value={eventEndDate}
+                          onChange={(e) => setEventEndDate(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* EVENT TIMES: START TIME & END TIME */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Start Time</label>
                         <input
                           type="text"
                           value={eventTime}
                           onChange={(e) => setEventTime(e.target.value)}
-                          placeholder="12:00 PM - 7:00 PM"
+                          placeholder="e.g. 12:00 PM"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">End Time (Optional)</label>
+                        <input
+                          type="text"
+                          value={eventEndTime}
+                          onChange={(e) => setEventEndTime(e.target.value)}
+                          placeholder="e.g. 7:00 PM"
                           className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
                         />
                       </div>

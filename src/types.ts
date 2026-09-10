@@ -20,7 +20,9 @@ export interface Event {
   title: string;
   subtitle?: string;
   date: string;
+  endDate?: string;
   time?: string;
+  endTime?: string;
   venue?: string;
   artist?: string;
   image?: string;

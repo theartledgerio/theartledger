@@ -14,6 +14,48 @@ interface EventsProps {
   onChangePage?: (pageId: string) => void;
 }
 
+export const formatEventDateRange = (startDateStr: string, endDateStr?: string): string => {
+  if (!startDateStr) return 'TBD';
+  const start = new Date(startDateStr);
+  if (isNaN(start.getTime())) return startDateStr;
+
+  if (!endDateStr || endDateStr === startDateStr) {
+    return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const end = new Date(endDateStr);
+  if (isNaN(end.getTime())) {
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${endDateStr}`;
+  }
+
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+
+  if (startYear === endYear && startMonth === endMonth) {
+    return `${startMonth} ${startDay} – ${endDay}, ${startYear}`;
+  } else if (startYear === endYear) {
+    return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${startYear}`;
+  } else {
+    return `${startMonth} ${startDay}, ${startYear} – ${endMonth} ${endDay}, ${endYear}`;
+  }
+};
+
+export const formatEventTimeRange = (timeStr?: string, endTimeStr?: string): string => {
+  const start = (timeStr || '').trim();
+  const end = (endTimeStr || '').trim();
+  if (start && end) {
+    if (start.includes('-') || start.includes('–') || start.toLowerCase().includes('to')) return start;
+    return `${start} – ${end}`;
+  }
+  if (start) return start;
+  if (end) return `Until ${end}`;
+  return '12:00 PM – 7:00 PM';
+};
+
 export default function Events({ isHome = false, onChangePage }: EventsProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
@@ -32,8 +74,10 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           id: 'freedom-season-3',
           title: 'Freedom - Season 3',
           subtitle: 'International Art Exhibition & Award Event',
-          date: '2026-08-26',
-          time: '12:00 PM - 7:00 PM',
+          date: '2026-08-11',
+          endDate: '2026-08-16',
+          time: '12:00 PM',
+          endTime: '7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
           image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
@@ -63,8 +107,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
             return !DUMMY_TITLES.some(d => titleLower.includes(d));
           })
           .map((item, index) => {
-            const eventDateStr = item.event_date || item.date || '2026-08-26';
-            const isPast = eventDateStr <= todayStr;
+            const eventDateStr = item.event_date || item.date || '2026-08-11';
+            const eventEndDateStr = item.end_date || item.endDate || '';
+            const isPast = (eventEndDateStr || eventDateStr) <= todayStr;
             const rawSt = (item.status || '').toLowerCase();
             let computedStatus: 'Upcoming' | 'Current' | 'Completed' | 'Past' = 'Upcoming';
             if (rawSt === 'completed') computedStatus = 'Completed';
@@ -79,7 +124,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
               title: item.title,
               subtitle: item.short_description || 'Curated Exhibition',
               date: eventDateStr,
-              time: item.time || '12:00 PM - 7:00 PM',
+              endDate: eventEndDateStr,
+              time: item.time || item.start_time || '12:00 PM',
+              endTime: item.end_time || item.endTime || (item.time && item.time.includes('-') ? '' : '7:00 PM'),
               venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
               artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
               image: item.featured_image_url || '',
@@ -94,6 +141,10 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
         const dbFreedom = realEventsFromDb.find(e => e.title.toLowerCase().includes('freedom'));
         const activeFreedom = dbFreedom ? {
           ...freedomEvent,
+          date: dbFreedom.date || freedomEvent.date,
+          endDate: dbFreedom.endDate || freedomEvent.endDate,
+          time: dbFreedom.time || freedomEvent.time,
+          endTime: dbFreedom.endTime || freedomEvent.endTime,
           image: dbFreedom.image || freedomEvent.image,
           subtitle: dbFreedom.subtitle || freedomEvent.subtitle,
           description: dbFreedom.description || freedomEvent.description,
@@ -203,7 +254,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                             {event.type}
                           </span>
                           <span className="text-[10px] font-mono text-graycustom">
-                            {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatEventDateRange(event.date, event.endDate)}
                           </span>
                         </div>
                         <h4 className="text-lg font-serif font-bold text-midnight group-hover:text-[#1C2D42] transition-colors line-clamp-1">
@@ -260,7 +311,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                             ARCHIVE
                           </span>
                           <span className="text-[10px] font-mono text-graycustom">
-                            {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatEventDateRange(event.date, event.endDate)}
                           </span>
                         </div>
                         <h4 className="text-lg font-serif font-bold text-midnight line-clamp-1">
@@ -720,7 +771,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                             <span className="font-mono text-[10px] uppercase tracking-wider">Date & Time</span>
                           </div>
                           <p className="pl-6 text-midnight text-sm font-semibold">
-                            {new Date(activeEvent.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {activeEvent.time}
+                            {formatEventDateRange(activeEvent.date, activeEvent.endDate)} • {formatEventTimeRange(activeEvent.time, activeEvent.endTime)}
                           </p>
                         </div>
 
