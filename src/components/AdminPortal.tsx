@@ -16,6 +16,9 @@ import { Blog, Artist, Magazine } from '../types';
 import Logo from './Logo';
 import { API_BASE_URL } from '../config';
 import mammoth from 'mammoth';
+import { convertDriveUrl, deleteStorageFileIfPresent, RichBlogContent, parseMarkdownLinks } from './blogRenderer';
+
+export { convertDriveUrl };
 
 interface AdminPortalProps {
   onChangePage?: (pageId: string) => void;
@@ -23,142 +26,6 @@ interface AdminPortalProps {
 }
 
 type TabType = 'dashboard' | 'hero' | 'blogs' | 'magazines' | 'artists' | 'payments' | 'events';
-
-export const convertDriveUrl = (url: string): string => {
-  if (!url) return '';
-  const trimmed = url.trim();
-  if (trimmed.includes('drive.google.com') && (trimmed.includes('/file/d/') || trimmed.includes('id='))) {
-    let fileId = '';
-    const match = trimmed.match(/\/file\/d\/([^\/\?]+)/);
-    if (match) {
-      fileId = match[1];
-    } else {
-      const matchId = trimmed.match(/[?&]id=([^&]+)/);
-      if (matchId) fileId = matchId[1];
-    }
-    if (fileId) {
-      return `https://lh3.googleusercontent.com/d/${fileId}`;
-    }
-  }
-  return trimmed;
-};
-
-const renderBlogPreviewContent = (text: string) => {
-  if (!text || text.trim() === '') {
-    return <p className="text-slate-400 italic text-center py-6">No article content written yet...</p>;
-  }
-
-  const paragraphs = text.split(/\n\s*\n/);
-  return paragraphs.map((block, idx) => {
-    const trimmed = block.trim();
-    if (!trimmed) return null;
-
-    if (trimmed.startsWith('## ')) {
-      return (
-        <h2 key={idx} className="text-xl md:text-2xl font-serif font-bold text-midnight mt-6 mb-3">
-          {trimmed.replace(/^##\s*/, '')}
-        </h2>
-      );
-    }
-    if (trimmed.startsWith('> ')) {
-      return (
-        <blockquote key={idx} className="my-6 pl-4 border-l-2 border-turquoise font-serif italic text-midnight text-sm bg-slate-50 py-3 px-4 rounded-r-xl">
-          "{trimmed.replace(/^>\s*/, '')}"
-        </blockquote>
-      );
-    }
-    if (
-      trimmed.startsWith('http://') || 
-      trimmed.startsWith('https://') || 
-      trimmed.startsWith('/') || 
-      trimmed.startsWith('data:image/')
-    ) {
-      const isImg = 
-        trimmed.startsWith('data:image/') ||
-        trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || 
-        trimmed.includes('lh3.googleusercontent.com') || 
-        trimmed.includes('unsplash.com') || 
-        trimmed.includes('supabase.co');
-        
-      if (isImg) {
-        return (
-          <div key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex justify-center bg-slate-50/50">
-            <img src={convertDriveUrl(trimmed)} alt="Inline Blog Image" className="w-full h-auto max-h-[550px] object-contain rounded-2xl" />
-          </div>
-        );
-      }
-    }
-    if (trimmed.startsWith('<img')) {
-      return (
-        <div key={idx} dangerouslySetInnerHTML={{ __html: trimmed }} className="my-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm" />
-      );
-    }
-    return (
-      <p key={idx} className="mb-4 text-xs md:text-sm text-slate-700 leading-relaxed font-sans">
-        {parseMarkdownLinksInPreview(trimmed)}
-      </p>
-    );
-  });
-};
-
-const parseMarkdownLinksInPreview = (text: string): React.ReactNode => {
-  if (!text) return null;
-  const linkRegex = /\[([^\]]+)\](?:\(([^)]+)\))?|(https?:\/\/[^\s<]+)/g;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = linkRegex.exec(text)) !== null) {
-    const matchIndex = match.index;
-    if (matchIndex > lastIndex) {
-      parts.push(text.substring(lastIndex, matchIndex));
-    }
-
-    const [fullMatch, bracketText, parenUrl, rawUrl] = match;
-
-    if (bracketText) {
-      const targetUrl = (parenUrl || '').trim();
-      const displayText = bracketText.trim();
-      const formattedHref = targetUrl.startsWith('http') || targetUrl.startsWith('/') ? targetUrl : `https://${targetUrl}`;
-
-      parts.push(
-        <a
-          key={matchIndex}
-          href={formattedHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline hover:text-midnight transition-colors cursor-pointer mx-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span>{displayText}</span>
-          <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
-        </a>
-      );
-    } else if (rawUrl) {
-      parts.push(
-        <a
-          key={matchIndex}
-          href={rawUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline hover:text-midnight transition-colors cursor-pointer mx-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span>{rawUrl}</span>
-          <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
-        </a>
-      );
-    }
-
-    lastIndex = linkRegex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-
-  return parts.length > 0 ? parts : text;
-};
 
 const extractParagraphTextWithLinks = (el: HTMLElement): string => {
   let output = '';
@@ -316,6 +183,12 @@ const DragDropFileZone: React.FC<{
     
     try {
       setIsUploading(true);
+      
+      // If replacing an existing file in Supabase storage, clean up old file
+      if (value) {
+        deleteStorageFileIfPresent(value);
+      }
+
       let fileToUpload = file;
       if (type === 'image' && file.type.startsWith('image/')) {
         fileToUpload = await compressImageFile(file);
@@ -426,7 +299,7 @@ const DragDropFileZone: React.FC<{
           <p className="text-[9px] font-mono text-slate-400">Upload direct file or paste link below</p>
         </div>
       </div>
-      <div className="flex gap-3 items-center pt-1">
+      <div className="flex gap-2.5 items-center pt-1">
         <input
           type="text"
           value={value}
@@ -435,10 +308,23 @@ const DragDropFileZone: React.FC<{
           className="flex-grow px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-mono"
         />
         {type === 'image' && value && (value.startsWith('http') || value.startsWith('data:image')) && (
-          <img src={value} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-100" />
+          <img src={convertDriveUrl(value)} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-100" />
         )}
         {type === 'video' && value && (value.startsWith('http') || value.startsWith('data:video')) && (
           <video src={value} className="w-14 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-black" autoPlay loop muted playsInline />
+        )}
+        {value && (
+          <button
+            type="button"
+            onClick={async () => {
+              await deleteStorageFileIfPresent(value);
+              onChange('');
+            }}
+            className="px-2.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[10px] font-mono font-bold uppercase transition-colors shrink-0 cursor-pointer"
+            title="Remove and delete uploaded file"
+          >
+            Clear
+          </button>
         )}
       </div>
     </div>
@@ -1162,18 +1048,23 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
     if (!file) return;
     try {
       triggerToast('Uploading inline image...');
-      const fileExt = file.name.split('.').pop() || 'png';
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        fileToUpload = await compressImageFile(file);
+      }
+      const fileExt = fileToUpload.name.split('.').pop() || 'jpg';
       const fileName = `inline_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
       const { error: uploadErr } = await supabase.storage
         .from('blog-images')
-        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+        .upload(fileName, fileToUpload, { contentType: fileToUpload.type || undefined, cacheControl: '3600', upsert: true });
 
       if (uploadErr) throw uploadErr;
 
       const { data } = supabase.storage.from('blog-images').getPublicUrl(fileName);
       if (data?.publicUrl) {
-        setBlogContent(prev => prev + (prev ? '\n\n' : '') + data.publicUrl + '\n\n');
+        const markdownImg = `\n\n![Article Image](${data.publicUrl})\n\n`;
+        setBlogContent(prev => (prev ? prev.trimEnd() + markdownImg : `![Article Image](${data.publicUrl})\n\n`));
         triggerToast('Inline image inserted into article!');
       }
     } catch (err: any) {
@@ -1476,10 +1367,29 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       }
 
       let table = '';
-      if (type === 'blog') table = 'blog_submissions';
-      else if (type === 'magazine') table = 'magazines';
-      else if (type === 'artist') table = 'featured_profiles';
-      else if (type === 'event') table = 'events';
+      if (type === 'blog') {
+        const item = blogsList.find(b => b.id === id);
+        if (item?.image_url) await deleteStorageFileIfPresent(item.image_url);
+        table = 'blog_submissions';
+      } else if (type === 'magazine') {
+        const item = magazinesList.find(m => m.id === id);
+        if (item?.cover_image_url) await deleteStorageFileIfPresent(item.cover_image_url);
+        if (item?.pdf_url) await deleteStorageFileIfPresent(item.pdf_url);
+        if (Array.isArray(item?.preview_pages)) {
+          for (const p of item.preview_pages) {
+            await deleteStorageFileIfPresent(p);
+          }
+        }
+        table = 'magazines';
+      } else if (type === 'artist') {
+        const item = artistsList.find(a => a.id === id);
+        if (item?.image_url) await deleteStorageFileIfPresent(item.image_url);
+        table = 'featured_profiles';
+      } else if (type === 'event') {
+        const item = eventsList.find(e => e.id === id);
+        if (item?.featured_image_url) await deleteStorageFileIfPresent(item.featured_image_url);
+        table = 'events';
+      }
 
       const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
@@ -2710,7 +2620,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                     )}
 
                     <div className="prose max-w-none text-midnight space-y-4 pt-2">
-                      {renderBlogPreviewContent(blogContent)}
+                      <RichBlogContent content={blogContent} />
                     </div>
                   </div>
                 )}

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Clock, ArrowLeft, Heart, Share2, MessageSquare, Send, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Blog } from '../types';
 import { supabase } from '../supabase';
+import { RichBlogContent, convertDriveUrl } from './blogRenderer';
 
 interface BlogPostPageProps {
   blog: Blog;
@@ -166,180 +167,14 @@ export default function BlogPostPage({ blog, onChangePage }: BlogPostPageProps) 
         {/* Cover Image */}
         {blog.image && (
           <div className="max-w-4xl mx-auto mb-10 overflow-hidden rounded-2xl shadow-lg flex justify-center bg-slate-50/50 border border-[#EAE5D8]">
-            <img src={blog.image} alt={blog.title} className="w-full h-auto object-contain max-h-[70vh] rounded-2xl" />
+            <img src={convertDriveUrl(blog.image)} alt={blog.title} className="w-full h-auto object-contain max-h-[70vh] rounded-2xl bg-white" />
           </div>
         )}
 
         {/* Article Content Render */}
-        {(() => {
-          const content = blog.content || '';
-          
-          const parseMarkdownLinks = (text: string): React.ReactNode => {
-            if (!text) return null;
-            const linkRegex = /\[([^\]]+)\](?:\(([^)]+)\))?|(https?:\/\/[^\s<]+)/g;
-            const parts: React.ReactNode[] = [];
-            let lastIndex = 0;
-            let match: RegExpExecArray | null;
-
-            while ((match = linkRegex.exec(text)) !== null) {
-              const matchIndex = match.index;
-              if (matchIndex > lastIndex) {
-                parts.push(text.substring(lastIndex, matchIndex));
-              }
-
-              const [fullMatch, bracketText, parenUrl, rawUrl] = match;
-
-              if (bracketText) {
-                let targetUrl = (parenUrl || '').trim();
-                let displayText = bracketText.trim();
-
-                if (!targetUrl) {
-                  if (displayText.toLowerCase() === 'npr') {
-                    targetUrl = 'https://www.npr.org';
-                  } else if (displayText.startsWith('http')) {
-                    targetUrl = displayText;
-                    try {
-                      displayText = new URL(displayText).hostname.replace(/^www\./, '');
-                    } catch (e) {
-                      displayText = 'Source';
-                    }
-                  } else {
-                    targetUrl = `https://www.google.com/search?q=${encodeURIComponent(displayText)}`;
-                  }
-                }
-
-                const formattedHref = targetUrl.startsWith('http') || targetUrl.startsWith('/') || targetUrl.startsWith('#')
-                  ? targetUrl
-                  : `https://${targetUrl}`;
-
-                parts.push(
-                  <a
-                    key={matchIndex}
-                    href={formattedHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline decoration-turquoise/40 hover:decoration-turquoise hover:text-midnight transition-all duration-200 cursor-pointer mx-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span>{displayText}</span>
-                    <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
-                  </a>
-                );
-              } else if (rawUrl) {
-                let displayUrl = rawUrl;
-                try {
-                  displayUrl = new URL(rawUrl).hostname.replace(/^www\./, '');
-                } catch (e) {}
-
-                parts.push(
-                  <a
-                    key={matchIndex}
-                    href={rawUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-baseline gap-0.5 text-turquoise font-semibold underline decoration-turquoise/40 hover:decoration-turquoise hover:text-midnight transition-all duration-200 cursor-pointer mx-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span>{displayUrl}</span>
-                    <ExternalLink className="w-3 h-3 self-center shrink-0 opacity-80" />
-                  </a>
-                );
-              }
-
-              lastIndex = linkRegex.lastIndex;
-            }
-
-            if (lastIndex < text.length) {
-              parts.push(text.substring(lastIndex));
-            }
-
-            return parts.length > 0 ? parts : text;
-          };
-
-          const processHtmlContent = (html: string) => {
-            if (!html) return '';
-            return html.replace(/<a\s+(?:[^>]*?\s+)?href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, (match, href, text) => {
-              return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-turquoise font-semibold underline hover:text-midnight transition-colors duration-200">${text}</a>`;
-            });
-          };
-
-          if (content.trim().startsWith('<') || /<[a-z][\s\S]*>/i.test(content)) {
-            return (
-              <div 
-                className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 blog-rich-content"
-                dangerouslySetInnerHTML={{ __html: processHtmlContent(content) }}
-              />
-            );
-          }
-
-          const blocks = content.split(/\n\s*\n/).filter(b => b.trim().length > 0);
-
-          return (
-            <div className="max-w-2xl mx-auto font-sans text-base text-graycustom leading-relaxed md:text-lg border-t border-offwhite pt-10 space-y-6">
-              {blocks.map((block, idx) => {
-                const trimmed = block.trim();
-
-                // Markdown image ![alt](url)
-                const mdImgMatch = trimmed.match(/^!\[(.*?)\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)$/i);
-                if (mdImgMatch) {
-                  const imgCaption = mdImgMatch[1];
-                  const imgSrc = mdImgMatch[2];
-                  return (
-                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8] flex flex-col items-center bg-slate-50/30">
-                      <img src={imgSrc} alt={imgCaption || 'Article Image'} className="w-full h-auto object-contain max-h-[75vh] rounded-2xl" />
-                      {imgCaption && <p className="text-[11px] font-mono text-graycustom px-4 py-2 border-t border-slate-100 w-full text-center">{imgCaption}</p>}
-                    </div>
-                  );
-                }
-
-                // Direct image URL or Data URL
-                if (
-                  (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/')) &&
-                  (
-                    trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg|avif)(\?.*)?$/i) ||
-                    trimmed.includes('googleusercontent.com') ||
-                    trimmed.includes('unsplash.com') ||
-                    trimmed.includes('supabase.co') ||
-                    trimmed.includes('postimg.cc') ||
-                    trimmed.includes('cloudinary.com') ||
-                    trimmed.includes('imgur.com') ||
-                    trimmed.startsWith('data:image/')
-                  )
-                ) {
-                  return (
-                    <div key={idx} className="my-8 overflow-hidden rounded-2xl shadow-md border border-[#EAE5D8] flex justify-center bg-slate-50/30">
-                      <img src={trimmed} alt="Article Image" className="w-full h-auto object-contain max-h-[75vh] rounded-2xl" />
-                    </div>
-                  );
-                }
-
-                if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
-                  const headingText = trimmed.replace(/^#+\s*/, '');
-                  return (
-                    <h2 key={idx} className="text-2xl font-serif font-bold text-midnight pt-4 tracking-tight">
-                      {parseMarkdownLinks(headingText)}
-                    </h2>
-                  );
-                }
-
-                if (trimmed.startsWith('>') || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
-                  const quoteText = trimmed.replace(/^>\s*/, '').replace(/^"|"$/g, '');
-                  return (
-                    <blockquote key={idx} className="italic font-serif text-slate-700 pl-5 border-l-4 border-turquoise my-6 text-lg md:text-xl leading-relaxed">
-                      "{parseMarkdownLinks(quoteText)}"
-                    </blockquote>
-                  );
-                }
-
-                return (
-                  <p key={idx} className="font-sans text-graycustom leading-relaxed font-normal">
-                    {parseMarkdownLinks(trimmed)}
-                  </p>
-                );
-              })}
-            </div>
-          );
-        })()}
+        <div className="max-w-2xl mx-auto border-t border-offwhite pt-10">
+          <RichBlogContent content={blog.content || ''} />
+        </div>
 
         {/* Discussion / Comments Section */}
         <div className="max-w-2xl mx-auto border-t border-offwhite mt-16 pt-12">

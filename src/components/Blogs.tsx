@@ -9,6 +9,8 @@ import { BookOpen, User, Clock, ArrowRight } from 'lucide-react';
 import { Blog } from '../types';
 import { supabase } from '../supabase';
 
+import { convertDriveUrl, extractFirstImage } from './blogRenderer';
+
 interface BlogsProps {
   searchQuery: string;
   isHome?: boolean;
@@ -240,54 +242,18 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
 
         const filtered = data || [];
 
-        const extractFirstImage = (htmlContent: string) => {
-          if (!htmlContent) return null;
-          // 1. HTML img tag
-          const htmlMatch = htmlContent.match(/<img[^>]+src=["']?([^"'>\s]+)["']?/i);
-          if (htmlMatch) return htmlMatch[1];
-          // 2. Markdown image
-          const mdMatch = htmlContent.match(/!\[.*?\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/i);
-          if (mdMatch) return mdMatch[1];
-          // 3. Standalone image URL on its own line
-          const urlMatch = htmlContent.match(/(https?:\/\/[^\s<]+?\.(?:png|jpe?g|webp|gif|svg)|https?:\/\/[^\s<]+supabase\.co[^\s<]+|data:image\/[a-zA-Z]+;base64,[^\s<]+)/i);
-          if (urlMatch) return urlMatch[1];
-          return null;
-        };
-
         const mapped: Blog[] = filtered.map((item, index) => {
-          const isFatherDaughter = item.title?.toLowerCase().includes('father-daughter') || item.title?.toLowerCase().includes('fake history');
-
-          if (isFatherDaughter) {
-            return {
-              id: item.id,
-              title: 'A Father-Daughter Duo Who Sold Fake History Instead of Fake Art',
-              excerpt: 'How a notorious forgery case unravels the true power of provenance, Baudrillard’s hyperreality, and the triumph of the object in the art market.',
-              content: FATHER_DAUGHTER_BLOG_HTML,
-              image: item.image_url || '/blog1/1.png',
-              readingTime: '12 min read',
-              author: item.name || 'Editorial Board',
-              category: 'Art Market & Philosophy',
-              date: item.published_at
-                ? new Date(item.published_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })
-                : 'Mar 15, 2026',
-              featured: false
-            };
-          }
-
           const wordCount = item.content ? item.content.split(/\s+/).length : 0;
           const readMin = Math.max(1, Math.ceil(wordCount / 200));
           const extractedImg = extractFirstImage(item.content || '');
-          const coverImage = (item.image_url && item.image_url.trim().length > 0)
+          const rawCover = (item.image_url && item.image_url.trim().length > 0)
             ? item.image_url.trim()
             : (extractedImg || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800');
+          const coverImage = convertDriveUrl(rawCover);
 
           return {
             id: item.id,
-            title: item.title,
+            title: item.title || 'Untitled Essay',
             excerpt: item.short_description || '',
             content: item.content || '',
             image: coverImage,
@@ -305,15 +271,8 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           };
         });
 
-        const uniqueBlogs = mapped.filter((blog, index, self) =>
-          index === self.findIndex(b => b.title.toLowerCase().trim() === blog.title.toLowerCase().trim())
-        );
-
-        if (uniqueBlogs.length > 0) {
-          uniqueBlogs.forEach((b, i) => {
-            b.featured = (i === 0);
-          });
-          setBlogs(uniqueBlogs);
+        if (mapped.length > 0) {
+          setBlogs(mapped);
         } else {
           // Fallback if database table is completely empty
           setBlogs([
