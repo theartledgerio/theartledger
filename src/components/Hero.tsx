@@ -80,10 +80,7 @@ export default function Hero({ onChangePage }: HeroProps) {
           .eq('status', 'approved')
           .order('published_at', { ascending: false });
 
-        const realBlogs = (allBlogs || []).filter(item => {
-          const title = (item.title || '').toLowerCase();
-          return !title.includes('father') && !title.includes('daughter') && !title.includes('fake history') && item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && item.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
-        });
+        const realBlogs = allBlogs || [];
 
         const latestBlog = realBlogs[0];
         const extractedImage = latestBlog ? extractFirstImage(latestBlog.content) : null;

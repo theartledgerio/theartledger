@@ -37,21 +37,9 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   }
 });
 
-// Route: delete-target-blog
-app.post('/delete-target-blog', async (req, res) => {
-  try {
-    const { error: err1 } = await supabaseAdmin
-      .from('blog_submissions')
-      .delete()
-      .or("title.ilike.%father%,title.ilike.%daughter%,title.ilike.%fake history%,id.eq.715e9705-4d42-46a2-b86f-afc6f5f5f28e,id.eq.7904125e-bff5-4012-9e2a-3b6a4ad5f605");
-
-    if (err1) {
-      return res.status(500).json({ error: err1.message });
-    }
-    return res.status(200).json({ message: 'Target blogs deleted successfully' });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Route: payment-create

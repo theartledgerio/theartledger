@@ -10,6 +10,7 @@ import { Blog } from '../types';
 import { supabase } from '../supabase';
 
 import { convertDriveUrl, extractFirstImage } from './blogRenderer';
+import { FATHER_DAUGHTER_BLOG } from '../data/fatherDaughterBlog';
 
 interface BlogsProps {
   searchQuery: string;
@@ -33,12 +34,32 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
 
         if (error) throw error;
 
-        const filtered = (data || []).filter(item => {
-          const title = (item.title || '').toLowerCase();
-          return !title.includes('father') && !title.includes('daughter') && !title.includes('fake history') && item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && item.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
-        });
+        const allSubmissions = data || [];
 
-        const mapped: Blog[] = filtered.map((item, index) => {
+        const mapped: Blog[] = allSubmissions.map((item, index) => {
+          const isFakeHistory = (item.title || '').toLowerCase().includes('fake history') || item.id === FATHER_DAUGHTER_BLOG.id;
+          
+          if (isFakeHistory) {
+            return {
+              id: item.id || FATHER_DAUGHTER_BLOG.id,
+              title: item.title || FATHER_DAUGHTER_BLOG.title,
+              excerpt: item.short_description || FATHER_DAUGHTER_BLOG.excerpt,
+              content: item.content || FATHER_DAUGHTER_BLOG.content,
+              image: item.image_url ? convertDriveUrl(item.image_url) : FATHER_DAUGHTER_BLOG.image,
+              readingTime: '16 min read',
+              author: item.name || FATHER_DAUGHTER_BLOG.author,
+              category: item.category || FATHER_DAUGHTER_BLOG.category,
+              date: item.published_at
+                ? new Date(item.published_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })
+                : FATHER_DAUGHTER_BLOG.date,
+              featured: false
+            };
+          }
+
           const wordCount = item.content ? item.content.split(/\s+/).length : 0;
           const readMin = Math.max(1, Math.ceil(wordCount / 200));
           const extractedImg = extractFirstImage(item.content || '');
@@ -67,7 +88,14 @@ export default function Blogs({ searchQuery, isHome = false, onChangePage, onSel
           };
         });
 
-        setBlogs(mapped);
+        // Ensure the Duo Who Sold Fake History blog is present even if database row was removed
+        const hasFakeHistoryBlog = mapped.some(b => 
+          (b.title || '').toLowerCase().includes('fake history') || b.id === FATHER_DAUGHTER_BLOG.id
+        );
+
+        const finalBlogs = hasFakeHistoryBlog ? mapped : [FATHER_DAUGHTER_BLOG, ...mapped];
+
+        setBlogs(finalBlogs);
       } catch (err) {
         console.error('Error fetching blogs from database:', err);
       } finally {

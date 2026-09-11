@@ -17,6 +17,7 @@ import Logo from './Logo';
 import { API_BASE_URL } from '../config';
 import mammoth from 'mammoth';
 import { convertDriveUrl, deleteStorageFileIfPresent, RichBlogContent, parseMarkdownLinks } from './blogRenderer';
+import { FATHER_DAUGHTER_DB_RECORD } from '../data/fatherDaughterBlog';
 
 export { convertDriveUrl };
 
@@ -559,10 +560,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         .eq('status', 'approved')
         .order('published_at', { ascending: false });
 
-      const blogData = (blogList || []).find(b => {
-        const t = (b.title || '').toLowerCase();
-        return !t.includes('father') && !t.includes('daughter') && !t.includes('fake history') && b.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && b.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
-      });
+      const blogData = (blogList || [])[0];
 
       const { data: magData } = await supabase
         .from('magazines')
@@ -583,9 +581,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         {
           id: 'hero-blog',
           badge: blogData?.category ? `ESSAY // ${blogData.category.toUpperCase()}` : 'ESSAY // CONTEMPORARY ART',
-          title: blogData?.title || 'Folk Art of the United States: History, Artists, Styles & Cultural Traditions',
+          title: blogData?.title || 'Duo Who Sold Fake History Instead of Fake Art',
           subtitle: blogData?.short_description || 'Exploring contemporary aesthetics, spatial dynamics, and cultural reflections.',
-          media_url: convertDriveUrl(blogData?.image_url || ''),
+          media_url: convertDriveUrl(blogData?.image_url || '/blog1/1.png'),
           media_type: 'image',
           link_page: 'blogs',
           link_text: 'Read Full Essay'
@@ -631,11 +629,11 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           .from('blog_submissions')
           .select('*')
           .order('published_at', { ascending: false });
-        const filtered = (data || []).filter(item => {
-          const t = (item.title || '').toLowerCase();
-          return !t.includes('father') && !t.includes('daughter') && !t.includes('fake history') && item.id !== '715e9705-4d42-46a2-b86f-afc6f5f5f28e' && item.id !== '7904125e-bff5-4012-9e2a-3b6a4ad5f605';
-        });
-        setBlogsList(filtered);
+        const list = data || [];
+        const hasFakeHistory = list.some(item => 
+          (item.title || '').toLowerCase().includes('fake history') || item.id === FATHER_DAUGHTER_DB_RECORD.id
+        );
+        setBlogsList(hasFakeHistory ? list : [FATHER_DAUGHTER_DB_RECORD, ...list]);
       }
       if (activeTab === 'magazines' || activeTab === 'dashboard') {
         const { data } = await supabase
