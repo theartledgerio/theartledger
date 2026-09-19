@@ -10,3 +10,12 @@ ALTER TABLE public.magazines
 ALTER TABLE public.payments 
   ADD COLUMN IF NOT EXISTS currency text DEFAULT 'INR'::text,
   ADD COLUMN IF NOT EXISTS shipping_fee numeric DEFAULT 0;
+
+ALTER TABLE public.events
+  ADD COLUMN IF NOT EXISTS curator_name text,
+  ADD COLUMN IF NOT EXISTS curator_bio text,
+  ADD COLUMN IF NOT EXISTS curator_image_url text,
+  ADD COLUMN IF NOT EXISTS end_date date,
+  ADD COLUMN IF NOT EXISTS time text,
+  ADD COLUMN IF NOT EXISTS end_time text;
+

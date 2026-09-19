@@ -26,7 +26,10 @@ export interface Event {
   venue?: string;
   artist?: string;
   image?: string;
-  status: 'Upcoming' | 'Current' | 'Completed' | 'Past';
+  curatorName?: string;
+  curatorBio?: string;
+  curatorImage?: string;
+  status: 'Upcoming' | 'Current' | 'Completed' | 'Past' | 'Draft' | 'Published';
   description?: string;
   type?: 'Exhibition' | 'Panel Discussion' | 'Auction' | 'Private View' | string;
   timelineStep?: number; // For interactive timeline ordering

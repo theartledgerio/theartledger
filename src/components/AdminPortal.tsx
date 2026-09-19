@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../supabase';
 import { 
   Lock, Mail, Eye, EyeOff, LayoutDashboard, BookOpen, 
-  Users, Layers, LogOut, Plus, Trash2, Edit3, X, Save, 
+  Users, User, Layers, LogOut, Plus, Trash2, Edit3, X, Save, 
   CheckCircle2, AlertTriangle, ArrowLeft, Sparkles, FileText, Download, UploadCloud, CreditCard, Calendar, MapPin, Images, Film,
   Search, Filter, RotateCcw, ExternalLink
 } from 'lucide-react';
@@ -456,9 +456,12 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
   const [eventVenue, setEventVenue] = useState('');
   const [eventArtist, setEventArtist] = useState('');
   const [eventImage, setEventImage] = useState('');
+  const [eventCuratorName, setEventCuratorName] = useState('');
+  const [eventCuratorBio, setEventCuratorBio] = useState('');
+  const [eventCuratorImage, setEventCuratorImage] = useState('');
   const [eventType, setEventType] = useState('Exhibition');
   const [eventDescription, setEventDescription] = useState('');
-  const [eventStatus, setEventStatus] = useState('Upcoming');
+  const [eventStatus, setEventStatus] = useState('published');
 
   // 5. Hero Card State
   const [heroList, setHeroList] = useState<any[]>([]);
@@ -672,6 +675,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           end_time: '7:00 PM',
           location: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
+          curator_name: 'Siddharth Karmakar Art Foundation (SKAF India)',
+          curator_bio: 'Founded by artist and advertising professional Siddharth Karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddharth combines creative and strategic expertise to guide artists in navigating today’s art landscape.',
+          curator_image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
           featured_image_url: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
           status: 'published',
           type: 'Exhibition'
@@ -904,9 +910,13 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
       setEventVenue(item ? item.location || item.venue || '' : '');
       setEventArtist(item ? item.artist || '' : '');
       setEventImage(item ? item.featured_image_url || item.image || '' : '');
+      setEventCuratorName(item ? item.curator_name || item.curatorName || '' : '');
+      setEventCuratorBio(item ? item.curator_bio || item.curatorBio || '' : '');
+      setEventCuratorImage(item ? item.curator_image_url || item.curatorImage || '' : '');
       setEventType(item ? item.type || 'Exhibition' : 'Exhibition');
       setEventDescription(item ? item.long_description || item.description || '' : '');
-      setEventStatus(item ? item.status || 'Upcoming' : 'Upcoming');
+      const rawSt = (item?.status || 'published').toLowerCase();
+      setEventStatus(rawSt.includes('draft') ? 'draft' : 'published');
     } else if (type === 'hero') {
       setHeroBadge(item ? item.badge || '' : 'FEATURED EDITORIAL');
       setHeroTitle(item ? item.title || '' : '');
@@ -1268,13 +1278,8 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           triggerToast('Artist profile updated successfully!');
         }
       } else if (formType === 'event') {
-        const rawStatus = (eventStatus || 'Upcoming').toLowerCase();
-        let finalStatus = 'upcoming';
-        if (rawStatus.includes('completed')) finalStatus = 'completed';
-        else if (rawStatus.includes('past')) finalStatus = 'past';
-        else if (rawStatus.includes('current')) finalStatus = 'current';
-        else if (rawStatus.includes('draft')) finalStatus = 'draft';
-        else if (rawStatus.includes('published')) finalStatus = 'published';
+        const rawStatus = (eventStatus || 'published').toLowerCase();
+        const finalStatus = rawStatus.includes('draft') ? 'draft' : 'published';
 
         const payload: any = {
           title: eventTitle || 'Untitled Event',
@@ -1286,6 +1291,9 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
           end_time: eventEndTime || null,
           location: eventVenue || '',
           featured_image_url: convertDriveUrl(eventImage),
+          curator_name: eventCuratorName || null,
+          curator_bio: eventCuratorBio || null,
+          curator_image_url: convertDriveUrl(eventCuratorImage) || null,
           status: finalStatus,
           slug: (eventTitle || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`
         };
@@ -1293,7 +1301,7 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
         if (formMode === 'create') {
           const { error } = await supabase.from('events').insert([payload]);
           if (error) {
-            // Fallback without optional columns if table schema differs
+            // Fallback without optional columns if database table columns are pending migration
             const corePayload = {
               title: payload.title,
               short_description: payload.short_description,
@@ -2176,17 +2184,29 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
 
             {/* Events table */}
             <div className="bg-white border border-[#EAE5D8] rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-slate-200/60 bg-slate-50/50">
-                <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">Exhibitions & Events ({eventsList.length})</h3>
+              <div className="p-6 border-b border-slate-200/60 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-mono text-slate-400 font-bold uppercase tracking-widest">Exhibitions & Events ({eventsList.length})</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5 font-sans">
+                    Events automatically transition between Live, Upcoming, and Past Archive based on the date.
+                  </p>
+                </div>
+                <button
+                  onClick={() => openForm('event', 'create')}
+                  className="px-4 py-2 bg-midnight hover:bg-turquoise hover:text-midnight text-white rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md flex items-center gap-2 self-start sm:self-auto"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Event</span>
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-200/60 text-slate-500 uppercase font-mono text-[9px] tracking-wider">
-                      <th className="p-4">Title</th>
+                      <th className="p-4">Title & Curator</th>
                       <th className="p-4">Date & Time Range</th>
                       <th className="p-4">Venue/Location</th>
-                      <th className="p-4">Status</th>
+                      <th className="p-4">Publication / Date Status</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -2200,45 +2220,76 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         <td colSpan={5} className="p-8 text-center text-slate-500 font-mono">No events recorded in database.</td>
                       </tr>
                     ) : (
-                      eventsList.map(ev => (
-                        <tr key={ev.id} className="hover:bg-slate-50/60">
-                          <td className="p-4 font-serif font-bold text-midnight max-w-sm truncate">{ev.title}</td>
-                          <td className="p-4 text-slate-600 font-mono text-xs">
-                            <div className="font-semibold text-midnight">
-                              {ev.event_date || ev.date || 'TBD'}{ev.end_date || ev.endDate ? ` → ${ev.end_date || ev.endDate}` : ''}
-                            </div>
-                            {(ev.time || ev.end_time || ev.start_time) && (
-                              <div className="text-[10px] text-slate-500 mt-0.5">
-                                {ev.time || ev.start_time || ''}{ev.end_time && !((ev.time || '').includes('-')) ? ` – ${ev.end_time}` : ''}
+                      eventsList.map(ev => {
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const evStart = ev.event_date || ev.date || '';
+                        const evEnd = ev.end_date || ev.endDate || evStart;
+                        const isDraft = (ev.status || '').toLowerCase() === 'draft';
+                        const isPast = evEnd < todayStr;
+                        const isLive = evStart <= todayStr && todayStr <= evEnd;
+                        const curatorName = ev.curator_name || ev.curatorName || (ev.artist ? ev.artist.replace(/.*Curator:\s*/i, '').replace(/\)/, '') : '');
+
+                        return (
+                          <tr key={ev.id} className="hover:bg-slate-50/60">
+                            <td className="p-4 max-w-sm">
+                              <div className="font-serif font-bold text-midnight text-sm truncate">{ev.title}</div>
+                              {curatorName && (
+                                <div className="text-[11px] text-turquoise font-medium mt-0.5 truncate flex items-center gap-1.5">
+                                  <User className="w-3 h-3 text-turquoise shrink-0" />
+                                  <span>Curator: {curatorName}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-4 text-slate-600 font-mono text-xs">
+                              <div className="font-semibold text-midnight">
+                                {ev.event_date || ev.date || 'TBD'}{ev.end_date || ev.endDate ? ` → ${ev.end_date || ev.endDate}` : ''}
                               </div>
-                            )}
-                          </td>
-                          <td className="p-4 text-slate-600 truncate max-w-xs">{ev.location || ev.venue || 'N/A'}</td>
-                          <td className="p-4">
-                            <span className={`px-2 py-0.5 rounded-full font-mono text-[9px] uppercase font-bold border ${
-                              ev.status === 'completed' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}>
-                              {ev.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right space-x-2">
-                            <button
-                              onClick={() => openForm('event', 'edit', ev)}
-                              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 hover:text-midnight transition-colors cursor-pointer inline-flex"
-                              title="Edit Event"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete('event', ev.id)}
-                              className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-600 transition-colors cursor-pointer inline-flex"
-                              title="Delete Event"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                              {(ev.time || ev.end_time || ev.start_time) && (
+                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                  {ev.time || ev.start_time || ''}{ev.end_time && !((ev.time || '').includes('-')) ? ` – ${ev.end_time}` : ''}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-4 text-slate-600 truncate max-w-xs">{ev.location || ev.venue || 'N/A'}</td>
+                            <td className="p-4">
+                              {isDraft ? (
+                                <span className="px-2.5 py-1 rounded-full font-mono text-[9px] uppercase font-bold border bg-amber-50 text-amber-700 border-amber-200 inline-block">
+                                  Draft (Hidden)
+                                </span>
+                              ) : isLive ? (
+                                <span className="px-2.5 py-1 rounded-full font-mono text-[9px] uppercase font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Live Now
+                                </span>
+                              ) : isPast ? (
+                                <span className="px-2.5 py-1 rounded-full font-mono text-[9px] uppercase font-bold border bg-slate-100 text-slate-600 border-slate-200 inline-block">
+                                  Past Archive
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full font-mono text-[9px] uppercase font-bold border bg-blue-50 text-blue-700 border-blue-200 inline-block">
+                                  Upcoming
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right space-x-2">
+                              <button
+                                onClick={() => openForm('event', 'edit', ev)}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 hover:text-midnight transition-colors cursor-pointer inline-flex"
+                                title="Edit Event"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete('event', ev.id)}
+                                className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-600 transition-colors cursor-pointer inline-flex"
+                                title="Delete Event"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -3245,18 +3296,18 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Status</label>
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Publication Status</label>
                         <select
                           value={eventStatus}
                           onChange={(e) => setEventStatus(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none font-medium"
                         >
-                          <option value="Upcoming">Upcoming</option>
-                          <option value="Current">Current</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Past">Past</option>
-                          <option value="Draft">Draft</option>
+                          <option value="published">Published (Live on Website)</option>
+                          <option value="draft">Draft (Hidden from Public)</option>
                         </select>
+                        <p className="text-[9px] font-mono text-slate-400 mt-0.5">
+                          *Published events are automatically categorized into Live, Upcoming, or Past Archive based on date.
+                        </p>
                       </div>
                     </div>
 
@@ -3327,13 +3378,54 @@ export default function AdminPortal({ onChangePage, portalRole }: AdminPortalPro
                       type="image"
                     />
 
+                    {/* CURATOR MANAGEMENT SECTION */}
+                    <div className="p-4 bg-slate-100/70 border border-slate-200 rounded-2xl space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+                        <User className="w-4 h-4 text-turquoise" />
+                        <span className="text-[11px] font-mono text-midnight uppercase tracking-wider font-bold">
+                          Curator Profile Details & Biography
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Curator Name / Organization</label>
+                        <input
+                          type="text"
+                          value={eventCuratorName}
+                          onChange={(e) => setEventCuratorName(e.target.value)}
+                          placeholder="e.g. Siddharth Karmakar Art Foundation (SKAF India)"
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Curator Biography / Background Statement</label>
+                        <textarea
+                          rows={4}
+                          value={eventCuratorBio}
+                          onChange={(e) => setEventCuratorBio(e.target.value)}
+                          placeholder="Provide the background narrative of the curator, achievements, and foundation focus..."
+                          className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans"
+                        />
+                      </div>
+
+                      <DragDropFileZone
+                        label="Curator Portrait / Photo (Optional — Default Instagram-style silhouette avatar used if none provided)"
+                        accept="image/*"
+                        value={eventCuratorImage}
+                        onChange={(url) => setEventCuratorImage(url)}
+                        placeholder="Upload curator portrait or paste image link..."
+                        type="image"
+                      />
+                    </div>
+
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-slate-600 font-bold uppercase block">Detailed Overview & Description</label>
                       <textarea
                         rows={6}
                         value={eventDescription}
                         onChange={(e) => setEventDescription(e.target.value)}
-                        placeholder="Full exhibition narrative and rules..."
+                        placeholder="Full exhibition narrative, guidelines, and rules..."
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-turquoise focus:ring-1 focus:ring-turquoise rounded-xl text-xs text-midnight outline-none resize-none font-sans"
                       />
                     </div>

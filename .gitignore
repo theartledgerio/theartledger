@@ -1,27 +1,47 @@
+# Dependencies
 node_modules/
+backend/node_modules/
+
+# Production build output
 build/
 dist/
+backend/dist/
 coverage/
-.DS_Store
-*.log
 
-# Environment & Credentials
+# Logs & temporary files
+*.log
+.DS_Store
+.temp/
+supabase/.temp/
+
+# Environment & Credentials (sensitive keys)
 .env
 .env.*
+backend/.env
+backend/.env.*
 !.env.example
 *.pem
 *.key
 credentials.json
 
-# Scratch, DB backups, & standalone helper scripts
+# Scratch, DB backups & one-off testing scripts
 scratch/
 bucket/
+test-*.js
+test-*.cjs
+test-*.ts
+backend/test-*.cjs
+backend/test-*.ts
+identify-font.js
+
+# Standalone root scripts
 *.ts
 !src/**/*.ts
 !frontend/src/**/*.ts
 !frontend/.aistudio/src/**/*.ts
+!backend/server.ts
 
-# Public uploads & asset files
+# Public uploads & assets
 public/
 public/*
 

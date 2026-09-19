@@ -80,6 +80,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           endTime: '7:00 PM',
           venue: 'Nehru Centre AC Art Gallery, Worli, Mumbai',
           artist: 'SKAF India (Curator: Siddharth Karmakar)',
+          curatorName: 'Siddharth Karmakar Art Foundation (SKAF India)',
+          curatorBio: 'Founded by artist and advertising professional Siddharth Karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddharth combines creative and strategic expertise to guide artists in navigating today’s art landscape.',
+          curatorImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
           image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?auto=format&fit=crop&q=80&w=1200',
           status: 'Completed',
           description: 'Freedom - Season 3 is a prestigious international art exhibition and award event curated by Siddharth Karmakar. Designed to uplift emerging and established artists alike, it offers a prominent platform at the Nehru Centre AC Art Gallery in Worli, Mumbai. The exhibition welcomes diverse mediums including Painting, Sculpture, Graphic Art, Digital Art, and Photography (no crafts). Exhibiting artists are eligible for awards, certificates, physical catalogues, and mementos with zero sales commission.',
@@ -103,21 +106,29 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
 
         const realEventsFromDb: Event[] = (data || [])
           .filter(item => {
+            const rawSt = (item.status || '').toLowerCase();
+            // Filter out unpublished drafts from public views
+            if (rawSt === 'draft') return false;
             const titleLower = (item.title || '').toLowerCase();
             return !DUMMY_TITLES.some(d => titleLower.includes(d));
           })
           .map((item, index) => {
             const eventDateStr = item.event_date || item.date || '2026-08-11';
-            const eventEndDateStr = item.end_date || item.endDate || '';
-            const isPast = (eventEndDateStr || eventDateStr) <= todayStr;
-            const rawSt = (item.status || '').toLowerCase();
+            const eventEndDateStr = item.end_date || item.endDate || eventDateStr;
+
+            // Auto date-based status relative to current time
             let computedStatus: 'Upcoming' | 'Current' | 'Completed' | 'Past' = 'Upcoming';
-            if (rawSt === 'completed') computedStatus = 'Completed';
-            else if (rawSt === 'past') computedStatus = 'Past';
-            else if (rawSt === 'current') computedStatus = 'Current';
-            else if (rawSt === 'upcoming') computedStatus = 'Upcoming';
-            else if (rawSt === 'published') computedStatus = 'Current';
-            else computedStatus = isPast ? 'Completed' : 'Upcoming';
+            if (eventEndDateStr < todayStr) {
+              computedStatus = 'Completed';
+            } else if (eventDateStr <= todayStr && todayStr <= eventEndDateStr) {
+              computedStatus = 'Current';
+            } else {
+              computedStatus = 'Upcoming';
+            }
+
+            const curatorName = item.curator_name || item.curatorName || '';
+            const curatorBio = item.curator_bio || item.curatorBio || '';
+            const curatorImage = item.curator_image_url || item.curatorImage || '';
 
             return {
               id: item.id,
@@ -128,7 +139,10 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
               time: item.time || item.start_time || '12:00 PM',
               endTime: item.end_time || item.endTime || (item.time && item.time.includes('-') ? '' : '7:00 PM'),
               venue: item.location || 'Nehru Centre AC Art Gallery, Worli, Mumbai',
-              artist: item.artist || 'SKAF India (Curator: Siddharth Karmakar)',
+              artist: curatorName ? `Curator: ${curatorName}` : (item.artist || 'The Art Ledger Curatorial Board'),
+              curatorName,
+              curatorBio,
+              curatorImage,
               image: item.featured_image_url || '',
               status: computedStatus,
               description: item.long_description || item.short_description || '',
@@ -137,9 +151,14 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
             };
           });
 
+        // Calculate dynamic date status for Freedom Season 3 default
+        const freedomEnd = freedomEvent.endDate || freedomEvent.date;
+        const freedomAutoStatus: 'Upcoming' | 'Current' | 'Completed' = 
+          freedomEnd < todayStr ? 'Completed' : (freedomEvent.date <= todayStr && todayStr <= freedomEnd ? 'Current' : 'Upcoming');
+
         // Merge dynamic database updates for Freedom Season 3 if edited via Admin Portal
         const dbFreedom = realEventsFromDb.find(e => e.title.toLowerCase().includes('freedom'));
-        const activeFreedom = dbFreedom ? {
+        const activeFreedom: Event = dbFreedom ? {
           ...freedomEvent,
           date: dbFreedom.date || freedomEvent.date,
           endDate: dbFreedom.endDate || freedomEvent.endDate,
@@ -149,13 +168,35 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           subtitle: dbFreedom.subtitle || freedomEvent.subtitle,
           description: dbFreedom.description || freedomEvent.description,
           venue: dbFreedom.venue || freedomEvent.venue,
-          status: 'Completed' as const
-        } : freedomEvent;
+          curatorName: dbFreedom.curatorName || freedomEvent.curatorName,
+          curatorBio: dbFreedom.curatorBio || freedomEvent.curatorBio,
+          curatorImage: dbFreedom.curatorImage || freedomEvent.curatorImage,
+          status: dbFreedom.status || freedomAutoStatus
+        } : {
+          ...freedomEvent,
+          status: freedomAutoStatus
+        };
 
-        // Combine all active and archived exhibitions
-        const allExhibitions = [activeFreedom, ...realEventsFromDb.filter(e => e.id !== activeFreedom.id)];
-        setEvents(allExhibitions);
-        setActiveEvent(activeFreedom);
+        // Combine all exhibitions and sort into clear hierarchy:
+        // 1. Live Now events (ascending date)
+        // 2. Upcoming events (ascending date — soonest first)
+        // 3. Past Archive events (descending date — most recent past first)
+        const allUnsorted = [activeFreedom, ...realEventsFromDb.filter(e => e.id !== activeFreedom.id)];
+
+        const liveList = allUnsorted.filter(e => e.status === 'Current').sort((a, b) => a.date.localeCompare(b.date));
+        const upcomingList = allUnsorted.filter(e => e.status === 'Upcoming').sort((a, b) => a.date.localeCompare(b.date));
+        const pastList = allUnsorted.filter(e => e.status === 'Completed' || e.status === 'Past').sort((a, b) => b.date.localeCompare(a.date));
+
+        const structuredHierarchy = [...liveList, ...upcomingList, ...pastList].map((ev, idx) => ({
+          ...ev,
+          timelineStep: idx + 1
+        }));
+
+        setEvents(structuredHierarchy);
+
+        // Active focus: Live event first, then next Upcoming event, then most recent past event
+        const initialActive = liveList[0] || upcomingList[0] || pastList[0] || activeFreedom;
+        setActiveEvent(initialActive);
       } catch (err) {
         console.error('Error fetching events:', err);
       } finally {
@@ -185,9 +226,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
     }
   };
 
-  // Filter events for simple home layout
-  const upcomingEvents = events.filter(e => e.status !== 'Completed');
-  const completedEvents = events.filter(e => e.status === 'Completed');
+  // Filter events for simple home layout (Live & Upcoming vs Previous Archive)
+  const upcomingEvents = events.filter(e => e.status === 'Current' || e.status === 'Upcoming');
+  const completedEvents = events.filter(e => e.status === 'Completed' || e.status === 'Past');
 
   // HOME SCREEN LAYOUT (Simple, nice, no video, 2 sections for upcoming vs previous)
   if (isHome) {
@@ -216,62 +257,72 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
           {/* Two Columns: Upcoming vs Previous */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16">
             
-            {/* Column 1: Upcoming Events */}
+            {/* Column 1: Live & Upcoming Events */}
             <div className="space-y-8">
               <div className="flex items-center gap-3 border-b border-offwhite pb-4">
                 <div className="p-2 bg-midnight/5 text-midnight rounded-xl">
                   <Hourglass className="w-5 h-5 text-midnight" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-serif font-bold text-midnight">
-                  Upcoming Releases
+                  Upcoming & Live Exhibitions
                 </h3>
               </div>
 
               <div className="space-y-6">
-                {upcomingEvents.map((event) => (
-                  <div 
-                    key={event.id}
-                    onClick={() => onChangePage?.('events')}
-                    className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
-                  >
-                    {/* Visual Media Container */}
-                    {event.image && (
-                      <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
-                        <img 
-                          src={event.image} 
-                          alt={event.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
-
-                    {/* Meta info */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-midnight bg-midnight/5 px-2 py-0.5 rounded-full">
-                            {event.type}
-                          </span>
-                          <span className="text-[10px] font-mono text-graycustom">
-                            {formatEventDateRange(event.date, event.endDate)}
-                          </span>
+                {upcomingEvents.length === 0 ? (
+                  <p className="text-sm text-graycustom font-mono">No upcoming exhibitions scheduled.</p>
+                ) : (
+                  upcomingEvents.map((event) => (
+                    <div 
+                      key={event.id}
+                      onClick={() => onChangePage?.('events')}
+                      className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
+                    >
+                      {/* Visual Media Container */}
+                      {event.image && (
+                        <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
+                          <img 
+                            src={event.image} 
+                            alt={event.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
-                        <h4 className="text-lg font-serif font-bold text-midnight group-hover:text-[#1C2D42] transition-colors line-clamp-1">
-                          {event.title}
-                        </h4>
-                        <p className="text-xs text-graycustom font-medium mt-1">
-                          By {event.artist}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-1.5 text-[11px] text-graycustom mt-3">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="truncate">{event.venue}</span>
+                      )}
+
+                      {/* Meta info */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-midnight bg-midnight/5 px-2 py-0.5 rounded-full">
+                              {event.type}
+                            </span>
+                            {event.status === 'Current' && (
+                              <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Live Now
+                              </span>
+                            )}
+                            <span className="text-[10px] font-mono text-graycustom">
+                              {formatEventDateRange(event.date, event.endDate)}
+                            </span>
+                          </div>
+                          <h4 className="text-lg font-serif font-bold text-midnight group-hover:text-[#1C2D42] transition-colors line-clamp-1">
+                            {event.title}
+                          </h4>
+                          <p className="text-xs text-graycustom font-medium mt-1">
+                            By {event.curatorName ? `Curator: ${event.curatorName}` : event.artist}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 text-[11px] text-graycustom mt-3">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="truncate">{event.venue}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -287,48 +338,52 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
               </div>
 
               <div className="space-y-6">
-                {completedEvents.map((event) => (
-                  <div 
-                    key={event.id}
-                    onClick={() => onChangePage?.('events')}
-                    className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
-                  >
-                    {/* Full Color Media Container */}
-                    <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
-                      <img 
-                        src={event.image} 
-                        alt={event.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                {completedEvents.length === 0 ? (
+                  <p className="text-sm text-graycustom font-mono">No archived exhibitions yet.</p>
+                ) : (
+                  completedEvents.map((event) => (
+                    <div 
+                      key={event.id}
+                      onClick={() => onChangePage?.('events')}
+                      className="group bg-white/40 hover:bg-white/90 border border-offwhite/50 hover:border-offwhite rounded-2xl p-5 transition-all duration-300 flex flex-col sm:flex-row gap-5 shadow-sm hover:shadow-md cursor-pointer"
+                    >
+                      {/* Full Color Media Container */}
+                      <div className="w-full sm:w-28 h-28 rounded-xl overflow-hidden shrink-0">
+                        <img 
+                          src={event.image} 
+                          alt={event.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
 
-                    {/* Meta info */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-graycustom bg-gray-200/40 px-2 py-0.5 rounded-full font-bold">
-                            ARCHIVE
-                          </span>
-                          <span className="text-[10px] font-mono text-graycustom">
-                            {formatEventDateRange(event.date, event.endDate)}
-                          </span>
+                      {/* Meta info */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-graycustom bg-gray-200/40 px-2 py-0.5 rounded-full font-bold">
+                              ARCHIVE
+                            </span>
+                            <span className="text-[10px] font-mono text-graycustom">
+                              {formatEventDateRange(event.date, event.endDate)}
+                            </span>
+                          </div>
+                          <h4 className="text-lg font-serif font-bold text-midnight line-clamp-1">
+                            {event.title}
+                          </h4>
+                          <p className="text-xs text-graycustom font-medium mt-1">
+                            By {event.curatorName ? `Curator: ${event.curatorName}` : event.artist}
+                          </p>
                         </div>
-                        <h4 className="text-lg font-serif font-bold text-midnight line-clamp-1">
-                          {event.title}
-                        </h4>
-                        <p className="text-xs text-graycustom font-medium mt-1">
-                          By {event.artist}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-1.5 text-[11px] text-graycustom mt-3">
-                        <CheckCircle className="w-3.5 h-3.5 text-graycustom" />
-                        <span>Completed Retrospective</span>
+                        
+                        <div className="flex items-center gap-1.5 text-[11px] text-graycustom mt-3">
+                          <CheckCircle className="w-3.5 h-3.5 text-graycustom" />
+                          <span>Completed Retrospective</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -457,6 +512,9 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                 
                 {events.map((event) => {
                   const isActive = activeEvent?.id === event.id;
+                  const isLive = event.status === 'Current';
+                  const isPast = event.status === 'Completed' || event.status === 'Past';
+
                   return (
                     <button
                       key={event.id}
@@ -498,14 +556,15 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                           }`}>
                             {event.type}
                           </span>
-                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full uppercase ${
-                            event.status === 'Completed'
-                              ? 'bg-red-500/10 text-red-400'
-                              : event.status === 'Current'
-                              ? 'bg-[#1C2D42]/20 text-midnight font-bold'
-                              : 'bg-midnight/10 text-midnight font-bold'
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full uppercase inline-flex items-center gap-1 font-bold ${
+                            isPast
+                              ? 'bg-slate-200/60 text-slate-600'
+                              : isLive
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-midnight/10 text-midnight group-hover:bg-midnight/20'
                           }`}>
-                            {event.status}
+                            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                            {isLive ? 'Live Now' : isPast ? 'Archive' : 'Upcoming'}
                           </span>
                         </div>
                         <h4 className={`text-base font-serif font-bold truncate ${
@@ -516,7 +575,7 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                         <p className={`text-xs truncate ${
                           isActive ? 'text-white/75' : 'text-graycustom'
                         }`}>
-                          {event.artist}
+                          {event.curatorName ? `Curator: ${event.curatorName}` : event.artist}
                         </p>
                       </div>
                     </button>
@@ -541,8 +600,11 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                       {/* Event Photo Cover */}
                       {activeEvent.image && (
                         <div className="h-[280px] sm:h-[380px] w-full rounded-2xl overflow-hidden relative shadow-md group">
-                          <div className="absolute top-4 left-4 z-10 px-4 py-2 bg-midnight/95 backdrop-blur-sm text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold">
-                            {activeEvent.status} SHOWING
+                          <div className="absolute top-4 left-4 z-10 px-4 py-2 bg-midnight/95 backdrop-blur-sm text-white text-[10px] font-mono uppercase tracking-widest rounded-full font-bold flex items-center gap-1.5">
+                            {activeEvent.status === 'Current' && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            )}
+                            {activeEvent.status === 'Current' ? 'LIVE NOW SHOWING' : activeEvent.status === 'Completed' || activeEvent.status === 'Past' ? 'ARCHIVE SHOWING' : 'UPCOMING SHOWING'}
                           </div>
                           <img
                             src={activeEvent.image}
@@ -600,18 +662,33 @@ export default function Events({ isHome = false, onChangePage }: EventsProps) {
                               {activeEvent.description}
                             </p>
                             
-                            {/* Curation Profile Block */}
+                            {/* Dynamic Curator Profile Block with Instagram-Style Default Avatar */}
                             <div className="bg-slate-50 border border-offwhite rounded-2xl p-5 flex flex-col md:flex-row gap-5 items-start">
-                              <img
-                                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"
-                                alt="Siddharth Karmakar"
-                                className="w-16 h-16 rounded-full object-cover shrink-0 border border-offwhite"
-                              />
-                              <div className="space-y-2">
-                                <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block font-bold">CURATOR BIOGRAPHY</span>
-                                <h4 className="text-sm font-serif font-bold text-midnight">Siddharth Karmakar Art Foundation (SKAF India)</h4>
+                              {activeEvent.curatorImage ? (
+                                <img
+                                  src={activeEvent.curatorImage}
+                                  alt={activeEvent.curatorName || 'Curator'}
+                                  className="w-16 h-16 rounded-full object-cover shrink-0 border border-offwhite shadow-sm"
+                                />
+                              ) : (
+                                <div
+                                  className="w-16 h-16 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden shadow-inner"
+                                  title="Curator Profile Avatar"
+                                >
+                                  <svg className="w-11 h-11 text-slate-400 translate-y-1.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="space-y-2 flex-1 min-w-0">
+                                <span className="text-[9px] font-mono text-turquoise uppercase tracking-widest block font-bold">
+                                  CURATOR BIOGRAPHY
+                                </span>
+                                <h4 className="text-sm font-serif font-bold text-midnight">
+                                  {activeEvent.curatorName || activeEvent.artist || 'The Art Ledger Curatorial Board'}
+                                </h4>
                                 <p className="text-xs text-graycustom leading-relaxed">
-                                  Founded by artist and advertising professional Siddharth Karmakar, SKAF is committed to uplifting emerging artists, especially those lacking recognition or platforms to showcase their work. With an MFA from Rabindra Bharati University, Kolkata and 25+ years in the advertising sector in Mumbai, Siddharth combines creative and strategic expertise to guide artists in navigating today’s art landscape.
+                                  {activeEvent.curatorBio || activeEvent.description || 'Curatorial commentary and exhibition documentation provided by The Art Ledger.'}
                                 </p>
                               </div>
                             </div>
